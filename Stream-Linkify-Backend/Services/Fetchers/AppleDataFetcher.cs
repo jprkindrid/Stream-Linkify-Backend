@@ -20,8 +20,11 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             {
                 ISRC = track.Attributes.Isrc,
                 SongName = track.Attributes.Name,
-                AritstNames = [track.Attributes.ArtistName],
+                ArtistNames = [track.Attributes.ArtistName],
                 AlbumName = track.Attributes.AlbumName,
+                AlbumArtworkUrl = track.Attributes.Artwork?.Url?
+                .Replace("{w}", "600")
+                .Replace("{h}", "600"),
                 StreamingServices = []
             };
 
@@ -39,7 +42,8 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             {
                 UPC = album.Attributes.Upc,
                 AlbumName = album.Attributes.Name,
-                AritstNames = [album.Attributes.ArtistName],
+                ArtistNames = [album.Attributes.ArtistName],
+                AlbumArtworkUrl = album.Attributes.Artwork?.Url,
                 StreamingServices = []
             };
 

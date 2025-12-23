@@ -18,8 +18,9 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var model = new AlbumModel
             {
                 AlbumName = track.Name,
-                AritstNames = [.. track.Artists.Select(a => a.Name)],
+                ArtistNames = [.. track.Artists.Select(a => a.Name)],
                 UPC = track.ExternalIds?.Upc,
+                AlbumArtworkUrl = track.Images?.OrderByDescending(i => i.Height).FirstOrDefault()?.Url,
                 StreamingServices = [],
             };
 
@@ -36,9 +37,10 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var model =  new TrackModel
             {
                 ISRC = track.ExternalIds?.Isrc,
-                AritstNames = [.. track.Artists.Select(a => a.Name)],
+                ArtistNames = [.. track.Artists.Select(a => a.Name)],
                 SongName = track.Name,
                 AlbumName = track.Album?.Name,
+                AlbumArtworkUrl = track.Album?.Images?.OrderByDescending(i => i.Height).FirstOrDefault()?.Url,
                 StreamingServices = []
             };
 

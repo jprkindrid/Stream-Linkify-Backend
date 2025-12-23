@@ -7,7 +7,7 @@ namespace Stream_Linkify_Backend.Models
     public class AlbumModel
     {
         public string? UPC { get; set; }
-        public required List<string> AritstNames { get; set; }
+        public required List<string> ArtistNames { get; set; }
         public string? AlbumName { get; set; }
         public required Dictionary<MusicPlatform, string> StreamingServices { get; set; } = [];
 

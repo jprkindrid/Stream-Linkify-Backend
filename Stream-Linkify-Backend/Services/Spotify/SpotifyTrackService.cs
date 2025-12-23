@@ -32,7 +32,7 @@ namespace Stream_Linkify_Backend.Services.Spotify
             return result;
         }
 
-        public async Task<(string? url, string? albumName, List<string> artistNames)> GetByNameAsync(string isrc, string trackName, string artistName)
+        public async Task<(string? url, string? albumName, List<string> artistNames, string artworkUrl)> GetByNameAsync(string isrc, string trackName, string artistName)
         {
             var query = $"isrc:{isrc}";
             var reqUrl = $"{spotifyApiUrl}/search?q={Uri.EscapeDataString(query)}&type=track%2Calbum";
@@ -47,10 +47,11 @@ namespace Stream_Linkify_Backend.Services.Spotify
                 var albumName = result.Tracks?.Items?.FirstOrDefault()?.Album?.Name;
 
                 var artistNames = result.Tracks?.Items?.FirstOrDefault()?.Artists.Select(a => a.Name).ToList();
+                var artworkUrl = result.Tracks?.Items?.FirstOrDefault()?.Album?.Images.OrderByDescending(i => i.Width).FirstOrDefault()?.Url;
                 if (artistNames == null)
-                    return (url, albumName, []);
+                    return (url, albumName, [], artworkUrl);
 
-                return (url, albumName, artistNames);
+                return (url, albumName, artistNames, artworkUrl);
             }
 
             logger.LogWarning("Could not get Spotify track for isrc '{isrc}' with title '{trackName}'", isrc, trackName);
@@ -63,7 +64,7 @@ namespace Stream_Linkify_Backend.Services.Spotify
             if (result == null || result.Tracks == null)
             {
                 logger.LogWarning("Coult not get Spotify track with name {trackName} and first artist name {artistName}", trackName, artistName);
-                return (null, null, []);
+                return (null, null, [], null);
             }
 
             foreach (var track in result.Tracks.Items)
@@ -76,14 +77,16 @@ namespace Stream_Linkify_Backend.Services.Spotify
                     var albumName = track.Album.Name;
 
                     var artistNames = track.Artists.Select(a => a.Name).ToList();
-                    if (artistNames == null)
-                        return (url, albumName, []);
+                    var artworkUrl = track.Album.Images.OrderByDescending(i => i.Width).FirstOrDefault()?.Url;
 
-                    return (url, albumName, artistNames);
+                    if (artistNames == null)
+                        return (url, albumName, [], artworkUrl);
+
+                    return (url, albumName, artistNames, artworkUrl);
                 }
             }
 
-            return (null, null, []);
+            return (null, null, [], null);
         }
     }
 }

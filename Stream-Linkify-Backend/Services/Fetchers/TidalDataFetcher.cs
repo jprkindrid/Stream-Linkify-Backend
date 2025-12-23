@@ -30,9 +30,11 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             {
                 ISRC = track.Data.Attributes.Isrc,
                 SongName = track.Data.Attributes.Title,
-                AritstNames = artists ?? [],
+                ArtistNames = artists ?? [],
                 StreamingServices = [],
             };
+
+            // Not adding album artwork because Tidal requires a seperate API request for it
 
             model.StreamingServices.Add(MusicPlatform.Tidal, tidalUrl);
 
@@ -53,9 +55,11 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             {
                 UPC = album.Data.Attributes.BarcodeId,
                 AlbumName = album.Data.Attributes.Title,
-                AritstNames = artists ?? [],
+                ArtistNames = artists ?? [],
                 StreamingServices = [],
             };
+
+            // Not adding album artwork because Tidal requires a seperate API request for it
 
             model.StreamingServices.Add(MusicPlatform.Tidal, tidalUrl);
 

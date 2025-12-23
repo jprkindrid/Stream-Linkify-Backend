@@ -9,7 +9,7 @@ namespace Stream_Linkify_Backend.Mappers
         {
             return new AlbumReturnDto
             {
-                ArtistNames = album.AritstNames,
+                ArtistNames = album.ArtistNames,
                 AlbumName = album.AlbumName,
                 StreamingServices = album.StreamingServices,
                 ArtworkUrl = album.AlbumArtworkUrl

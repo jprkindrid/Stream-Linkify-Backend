@@ -23,7 +23,8 @@ namespace Stream_Linkify_Backend.Services.Fetchers
                 ISRC = track.Isrc,
                 SongName = track.Title,
                 AlbumName = track.Album.Title,
-                AritstNames = [.. track.Contributors!.Select(x => x.Name)],
+                ArtistNames = [.. track.Contributors!.Select(x => x.Name)],
+                AlbumArtworkUrl = track.Album.CoverXl,
                 StreamingServices = []
             };
 
@@ -42,7 +43,8 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             {
                 UPC = album.Upc,
                 AlbumName = album.Title,
-                AritstNames = [.. album.Contributors!.Select(x => x.Name)],
+                ArtistNames = [.. album.Contributors!.Select(x => x.Name)],
+                AlbumArtworkUrl = album.CoverXl,
                 StreamingServices = []
             };
 

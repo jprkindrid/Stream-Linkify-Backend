@@ -89,7 +89,7 @@ namespace Stream_Linkify_Backend.Tests
             var exampleAlbumUpc = "199257088807"; // Kindrid - Inertia of Solitude
             var exampleAlbumLink = "https://open.spotify.com/album/0lEU44IEBoEONvqDU8hEHc";
 
-            var(albumResponseLink, _) = await albumService.GetByNameAsync(exampleAlbumUpc, "Inertia of Solitude", "Kindrid");
+            var(albumResponseLink, _, _) = await albumService.GetByNameAsync(exampleAlbumUpc, "Inertia of Solitude", "Kindrid");
 
             Assert.Equal(exampleAlbumLink, albumResponseLink);
         }

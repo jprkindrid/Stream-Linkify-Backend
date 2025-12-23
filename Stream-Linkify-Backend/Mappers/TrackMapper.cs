@@ -9,10 +9,10 @@ namespace Stream_Linkify_Backend.Mappers
         {
             return new TrackReturnDto
             {
-                ArtistNames = track.AritstNames,
+                ArtistNames = track.ArtistNames,
                 SongName = track.SongName,
                 StreamingServices = track.StreamingServices,
-                ArtworkUrl = track.AlbumArtworUrl
+                ArtworkUrl = track.AlbumArtworkUrl
             };
         }
     }
