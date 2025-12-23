@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace Stream_Linkify_Backend.DTOs.Tidal
 {
@@ -23,7 +24,7 @@ namespace Stream_Linkify_Backend.DTOs.Tidal
         [property: JsonPropertyName("duration")] string Duration,
         [property: JsonPropertyName("explicit")] bool Explicit,
         [property: JsonPropertyName("releaseDate")] string ReleaseDate,
-        [property: JsonPropertyName("copyright")] string Copyright,
+        [property: JsonPropertyName("copyright")] JsonElement Copyright,
         [property: JsonPropertyName("popularity")] double Popularity,
         [property: JsonPropertyName("availability")] List<string> Availability,
         [property: JsonPropertyName("mediaTags")] List<string> MediaTags,
