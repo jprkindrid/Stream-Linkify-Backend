@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Stream_Linkify_Backend.DTOs;
-using Stream_Linkify_Backend.Interfaces.Apple;
-using Stream_Linkify_Backend.Interfaces.Deezer;
-using Stream_Linkify_Backend.Interfaces.Spotify;
-using Stream_Linkify_Backend.Interfaces.Tidal;
-using Stream_Linkify_Backend.Models;
+using Stream_Linkify_Backend.Interfaces;
+using Stream_Linkify_Backend.Services;
 
 namespace Stream_Linkify_Backend.Controllers
 {
@@ -12,17 +9,11 @@ namespace Stream_Linkify_Backend.Controllers
     [Route("api/[controller]")]
     public class UrlConversionController(
         ILogger<UrlConversionController> logger,
-        ISpotifyInput spotifyInput,
-        IAppleInput appleInput,
-        ITidalInput tidalInput,
-        IDeezerInput deezerInput
+        IMusicInput musicInput
             ) : ControllerBase
     {
         private readonly ILogger<UrlConversionController> logger = logger;
-        private readonly ISpotifyInput spotifyInput = spotifyInput;
-        private readonly IAppleInput appleInput = appleInput;
-        private readonly ITidalInput tidalInput = tidalInput;
-        private readonly IDeezerInput deezerInput = deezerInput;
+
 
         [HttpPost("tracks")]
         public async Task<IActionResult> ConvertToAllTrackUrls([FromBody] TrackUrlRequestDto request)
@@ -32,19 +23,8 @@ namespace Stream_Linkify_Backend.Controllers
 
             try
             {
-                TrackReturnDto? resultTrack = uri.Host.ToLowerInvariant() switch
-                {
-                    "open.spotify.com" => await spotifyInput.GetTrackUrlsAsync(request.TrackUrl),
-                    "music.apple.com" => await appleInput.GetTrackUrlsAsync(request.TrackUrl),
-                    "listen.tidal.com" or "tidal.com" => await tidalInput.GetTrackUrlsAsync(request.TrackUrl),
-                    "www.deezer.com" or "link.deezer.com" => await deezerInput.GetTrackUrlsAsync(request.TrackUrl),
-                    _ => null
-                };
-
-                if (resultTrack == null)
-                    return NotFound("Track not found");
-
-                return Ok(resultTrack);
+                var result = await musicInput.GetTrackUrlsAsync(request.TrackUrl);
+                return Ok(result);
             }
             catch (InvalidOperationException ex)
             {
@@ -65,18 +45,7 @@ namespace Stream_Linkify_Backend.Controllers
 
             try
             {
-                AlbumReturnDto? resultTrack = uri.Host.ToLowerInvariant() switch
-                {
-                    "open.spotify.com" => await spotifyInput.GetAlbumUrlsAsync(request.AlbumUrl),
-                    "music.apple.com" => await appleInput.GetAlbumUrlsAsync(request.AlbumUrl),
-                    "listen.tidal.com" or "tidal.com" => await tidalInput.GetAlbumUrlsAsync(request.AlbumUrl),
-                    "www.deezer.com" or "link.deezer.com" => await deezerInput.GetAlbumUrlsAsync(request.AlbumUrl),
-                    _ => null
-                };
-
-                if (resultTrack == null)
-                    return NotFound("Track not found");
-
+                var resultTrack = await musicInput.GetAlbumUrlsAsync(request.AlbumUrl);
                 return Ok(resultTrack);
             }
             catch (InvalidOperationException ex)

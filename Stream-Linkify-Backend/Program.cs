@@ -22,11 +22,14 @@ builder.Services.AddControllers()
 
 // created services
 builder.Services.AddScoped<IMusicServiceFactory, MusicServiceFactory>();
+
 builder.Services.AddHttpClient();
 builder.Services.AddSpotifyServices();
 builder.Services.AddAppleServices();
 builder.Services.AddTidalServices();
 builder.Services.AddDeezerServices();
+builder.Services.AddInputAndResolver();
+builder.Services.AddFetcherServices();
 
 var app = builder.Build();
 
