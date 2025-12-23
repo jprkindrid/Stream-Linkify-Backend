@@ -49,10 +49,7 @@ namespace Stream_Linkify_Backend.Services.Deezer
                                   track.Artist.Name.Contains(artistName, StringComparison.OrdinalIgnoreCase);
 
                 if (titleMatch && artistMatch) 
-                {
-                    logger.LogWarning("Found Deezer track match for {trackName} by {artistName} at {url}", trackName, artistName, track.Link);
                     return track.Link;
-                }
                    
             }
 

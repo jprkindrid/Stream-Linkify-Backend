@@ -47,7 +47,6 @@ namespace Stream_Linkify_Backend.Services
                 track.ArtistNames.FirstOrDefault()
                 );
 
-            logger.LogInformation("Spotify Track URL resolved: {Url}", url);
             track.StreamingServices.Add(MusicPlatform.Spotify, url);
 
             if ((track.AlbumArtworkUrl == null || track.AlbumArtworkUrl == string.Empty) && artworkUrl != null && artworkUrl != string.Empty) {
@@ -75,7 +74,6 @@ namespace Stream_Linkify_Backend.Services
                 track.ArtistNames.FirstOrDefault()
                 );
 
-            logger.LogInformation("Apple Music Track URL resolved: {Url}", trackUrl);
             track.StreamingServices.Add(MusicPlatform.AppleMusic, trackUrl);
 
             if (trackUrl == null) {
@@ -91,7 +89,6 @@ namespace Stream_Linkify_Backend.Services
                 track.ISRC!
                 );
 
-            logger.LogInformation("TIDAL Track URL resolved: {Url}", trackUrl);
             track.StreamingServices.Add(MusicPlatform.Tidal, trackUrl);
 
             if (trackUrl == null) {
