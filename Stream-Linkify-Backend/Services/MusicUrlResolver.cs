@@ -9,41 +9,28 @@ namespace Stream_Linkify_Backend.Services
         IMusicServiceFactory musicServices
         ) : IMusicUrlResolver
     {
-        public async Task ResolveAlbumUrlsAsync(AlbumModel track, MusicPlatform sourcePlatform)
-        {
-            var tasks = new List<Task>();
-
-            if (sourcePlatform != MusicPlatform.Spotify)
-                tasks.Add(ResolveSpotifyAlbumAsync(track));
-
-            if (sourcePlatform != MusicPlatform.AppleMusic)
-                tasks.Add(ResolveAppleAlbumAsync(track));
-
-            if (sourcePlatform != MusicPlatform.Tidal)
-                tasks.Add(ResolveTidalAlbumAsync(track));
-
-            if (sourcePlatform != MusicPlatform.Deezer)
-                tasks.Add(ResolveDeezerAlbumAsync(track));
-
-            await Task.WhenAll(tasks);
-        }
 
         public async Task ResolveTrackUrlsAsync(TrackModel track, MusicPlatform sourcePlatform)
         {
             var tasks = new List<Task>();
 
-            if (sourcePlatform != MusicPlatform.Spotify)
-                tasks.Add(ResolveSpotifyTrackAsync(track));
+            if (sourcePlatform != MusicPlatform.Spotify) tasks.Add(ResolveSpotifyTrackAsync(track));
+            if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleTrackAsync(track));
+            if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalTrackAsync(track));
+            if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerTrackAsync(track));
 
-            if (sourcePlatform != MusicPlatform.AppleMusic)
-                tasks.Add(ResolveAppleTrackAsync(track));
+            await Task.WhenAll(tasks);
+        }
 
-            if (sourcePlatform != MusicPlatform.Tidal)
-                tasks.Add(ResolveTidalTrackAsync(track));
+        public async Task ResolveAlbumUrlsAsync(AlbumModel album, MusicPlatform sourcePlatform)
+        {
+            var tasks = new List<Task>();
 
-            if (sourcePlatform != MusicPlatform.Deezer)
-                tasks.Add(ResolveDeezerTrackAsync(track));
-            
+            if (sourcePlatform != MusicPlatform.Spotify) tasks.Add(ResolveSpotifyAlbumAsync(album));
+            if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleAlbumAsync(album));
+            if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalAlbumAsync(album));
+            if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerAlbumAsync(album));
+
             await Task.WhenAll(tasks);
         }
 
@@ -57,7 +44,7 @@ namespace Stream_Linkify_Backend.Services
                 track.AritstNames.FirstOrDefault()
                 );
 
-            track.SpotifyUrl = url;
+            track.StreamingServices.Add(MusicPlatform.Spotify, url);
 
             if (url == null) {
                 logger.LogWarning("Could not resolve Spotify URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.AritstNames), track.ISRC);
@@ -74,36 +61,42 @@ namespace Stream_Linkify_Backend.Services
 
         private async Task ResolveAppleTrackAsync(TrackModel track)
         {
-            track.AppleMusicUrl = await musicServices.AppleTrack.GetTrackUrlByNameAsync(
+            var trackUrl = await musicServices.AppleTrack.GetTrackUrlByNameAsync(
                 track.ISRC!,
                 track.SongName,
                 track.AritstNames.FirstOrDefault()
                 );
 
-            if (track.AppleMusicUrl == null) {
+            track.StreamingServices.Add(MusicPlatform.AppleMusic, trackUrl);
+
+            if (trackUrl == null) {
                 logger.LogWarning("Could not resolve Apple Music URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.AritstNames), track.ISRC);
             }
         }
 
         private async Task ResolveTidalTrackAsync(TrackModel track)
         {
-            track.TidalUrl = await musicServices.TidalTrack.GetTrackUrlByNameAsync(
+            var trackUrl = await musicServices.TidalTrack.GetTrackUrlByNameAsync(
                 track.SongName,
                 track.AritstNames.FirstOrDefault()!,
                 track.ISRC!
                 );
-            if (track.TidalUrl == null) {
+
+            track.StreamingServices.Add(MusicPlatform.Tidal, trackUrl);
+
+            if (trackUrl == null) {
                 logger.LogWarning("Could not resolve TIDAL URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.AritstNames), track.ISRC);
             }
         }
 
         private async Task ResolveDeezerTrackAsync(TrackModel track)
         {
-            track.DeezerUrl = await musicServices.DeezerTrack.GetByNameAsync(
+            var trackUrl = await musicServices.DeezerTrack.GetByNameAsync(
                 track.SongName,
                 track.AritstNames.FirstOrDefault()!
                 );
-            if (track.DeezerUrl == null) {
+
+            if (trackUrl == null) {
                 logger.LogWarning("Could not resolve Deezer URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.AritstNames), track.ISRC);
             }
         }
@@ -117,10 +110,10 @@ namespace Stream_Linkify_Backend.Services
                 album.AritstNames.FirstOrDefault()
                 );  
 
-            album.SpotifyUrl = url;
+            album.StreamingServices.Add(MusicPlatform.Spotify, url);
 
             if (url == null) { 
-                logger.LogWarning("Could not resolve Spotify URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.AritstNames));
+                logger.LogWarning("Could not resolve Spotify URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.AritstNames), album.UPC);
             }
 
             if (artistNames != null && (album.AritstNames.Count == 0 || artistNames.Count > album.AritstNames.Count)) {
@@ -130,35 +123,44 @@ namespace Stream_Linkify_Backend.Services
 
         private async Task ResolveAppleAlbumAsync(AlbumModel album)
         {
-            album.AppleMusicUrl = await musicServices.AppleAlbum.GetUrlByNameAsync(
+           var albumUrl = await musicServices.AppleAlbum.GetUrlByNameAsync(
                 album.UPC!,
                 album.AlbumName!,
                 album.AritstNames.FirstOrDefault()
                 );
-            if (album.AppleMusicUrl == null) {
+
+            album.StreamingServices.Add(MusicPlatform.AppleMusic, albumUrl);
+
+            if (albumUrl == null) {
                 logger.LogWarning("Could not resolve Apple Music URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.AritstNames), album.UPC);
             }
         }   
 
         private async Task ResolveTidalAlbumAsync(AlbumModel album)
         {
-            album.TidalUrl = await musicServices.TidalAlbum.GetUrlByNameAsync(
+            var albumUrl = await musicServices.TidalAlbum.GetUrlByNameAsync(
                 album.AlbumName!,
                 album.AritstNames.FirstOrDefault()!,
                 album.UPC!
                 );
-            if (album.TidalUrl == null) {
+
+            album.StreamingServices.Add(MusicPlatform.Tidal, albumUrl);
+
+            if (albumUrl == null) {
                 logger.LogWarning("Could not resolve TIDAL URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.AritstNames), album.UPC);
             }
         }
 
         private async Task ResolveDeezerAlbumAsync(AlbumModel album)
         {
-            album.DeezerUrl = await musicServices.DeezerAlbum.GetByNameAsync(
+            var albumUrl = await musicServices.DeezerAlbum.GetByNameAsync(
                 album.AlbumName!,
                 album.AritstNames.FirstOrDefault()!
                 );
-            if (album.DeezerUrl == null) {
+
+            album.StreamingServices.Add(MusicPlatform.Deezer, albumUrl);
+
+            if (albumUrl == null) {
                 logger.LogWarning("Could not resolve Deezer URL for album: {AlbumName} by {ArtistNames} ", album.AlbumName, string.Join(", ", album.AritstNames));
             }
         }

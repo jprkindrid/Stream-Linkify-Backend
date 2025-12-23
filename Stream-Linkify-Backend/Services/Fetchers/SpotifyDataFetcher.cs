@@ -15,13 +15,17 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var track = await musicServices.SpotifyAlbum.GetByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Spotify album not found for {url}.");
 
-            return new AlbumModel
+            var model = new AlbumModel
             {
                 AlbumName = track.Name,
                 AritstNames = [.. track.Artists.Select(a => a.Name)],
-                SpotifyUrl = track.ExternalUrls.Spotify,
-                UPC = track.ExternalIds?.Upc
+                UPC = track.ExternalIds?.Upc,
+                StreamingServices = [],
             };
+
+            model.StreamingServices.Add(MusicPlatform.Spotify, track.ExternalUrls.Spotify);
+
+            return model;
         }
 
         public async Task<TrackModel> FetchTrackDataAsync(string url)
@@ -29,14 +33,18 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var track = await musicServices.SpotifyTrack.GetByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Spotify track not found for {url}.");
 
-            return new TrackModel
+            var model =  new TrackModel
             {
                 ISRC = track.ExternalIds?.Isrc,
                 AritstNames = [.. track.Artists.Select(a => a.Name)],
                 SongName = track.Name,
                 AlbumName = track.Album?.Name,
-                SpotifyUrl = track.ExternalUrls.Spotify
+                StreamingServices = []
             };
+
+            model.StreamingServices.Add(MusicPlatform.Spotify, track.ExternalUrls.Spotify);
+
+            return model;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using Stream_Linkify_Backend.DTOs;
+using Stream_Linkify_Backend.Enums;
+using System.Text.Json;
 
 namespace Stream_Linkify_Backend.Models
 {
@@ -7,9 +9,9 @@ namespace Stream_Linkify_Backend.Models
         public string? UPC { get; set; }
         public required List<string> AritstNames { get; set; }
         public string? AlbumName { get; set; }
-        public string? SpotifyUrl { get; set; }
-        public string? AppleMusicUrl { get; set; }
-        public string? TidalUrl { get; set; }
-        public string? DeezerUrl { get; set; }
+        public required Dictionary<MusicPlatform, string> StreamingServices { get; set; } = [];
+
+        public string? AlbumArtworkUrl { get; set; }
+
     }
 }

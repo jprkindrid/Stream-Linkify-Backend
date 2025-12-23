@@ -11,11 +11,8 @@ namespace Stream_Linkify_Backend.Mappers
             {
                 ArtistNames = track.AritstNames,
                 SongName = track.SongName,
-                AlbumName = track.AlbumName,
-                Spotify = track.SpotifyUrl,
-                AppleMusic = track.AppleMusicUrl,
-                Tidal = track.TidalUrl,
-                Deezer = track.DeezerUrl
+                StreamingServices = track.StreamingServices,
+                ArtworkUrl = track.AlbumArtworUrl
             };
         }
     }

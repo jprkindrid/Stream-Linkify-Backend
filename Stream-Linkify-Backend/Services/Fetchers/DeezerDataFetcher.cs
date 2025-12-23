@@ -18,28 +18,37 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var track = await musicServices.DeezerTrack.GetByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Deezer track not found for {url}");
 
-            return new TrackModel
+            var model = new TrackModel
             {
                 ISRC = track.Isrc,
                 SongName = track.Title,
                 AlbumName = track.Album.Title,
                 AritstNames = [.. track.Contributors!.Select(x => x.Name)],
-                DeezerUrl = track.Link
+                StreamingServices = []
             };
+
+            model.StreamingServices.Add(MusicPlatform.Deezer, track.Link);
+
+            return model;
+            
         }
 
         public async Task<AlbumModel> FetchAlbumDataAsync(string url)
         {
             var album = await musicServices.DeezerAlbum.GetByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Deezer album not found for {url}");
-
-            return new AlbumModel
+            
+            var model = new AlbumModel
             {
                 UPC = album.Upc,
                 AlbumName = album.Title,
                 AritstNames = [.. album.Contributors!.Select(x => x.Name)],
-                DeezerUrl = album.Link
+                StreamingServices = []
             };
+
+            model.StreamingServices.Add(MusicPlatform.Deezer, album.Link);
+
+            return model;
         }
     }
 }

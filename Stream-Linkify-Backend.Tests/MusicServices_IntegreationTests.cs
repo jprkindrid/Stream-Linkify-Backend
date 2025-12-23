@@ -13,6 +13,7 @@ using Stream_Linkify_Backend.Services.Deezer;
 using Stream_Linkify_Backend.Services.Fetchers;
 using Stream_Linkify_Backend.Services.Spotify;
 using Stream_Linkify_Backend.Services.Tidal;
+using Stream_Linkify_Backend.Enums;
 using Xunit;
 
 namespace Stream_Linkify_Backend.Tests
@@ -72,6 +73,17 @@ namespace Stream_Linkify_Backend.Tests
             _serviceProvider = services.BuildServiceProvider();
         }
 
+        private static void WarnMissingPlatforms(
+            Dictionary<MusicPlatform, string> services,
+            MusicPlatform sourcePlatform)
+        {
+            foreach (var platform in Enum.GetValues<MusicPlatform>())
+            {
+                if (platform != sourcePlatform && !services.ContainsKey(platform))
+                    Console.WriteLine($"Warning: {platform} URL not resolved");
+            }
+        }
+
         #region Track Tests
 
         [Theory]
@@ -86,19 +98,12 @@ namespace Stream_Linkify_Backend.Tests
             using var scope = _serviceProvider.CreateScope();
             var musicInput = scope.ServiceProvider.GetRequiredService<IMusicInput>();
 
-            TrackReturnDto result = await musicInput.GetTrackUrlsAsync(inputUrl);
+            var result = await musicInput.GetTrackUrlsAsync(inputUrl);
 
             Assert.NotNull(result);
             Assert.Contains(expectedArtist, result.ArtistNames);
             Assert.False(string.IsNullOrEmpty(result.SongName));
-
-            Assert.True(
-                !string.IsNullOrEmpty(result.Spotify) ||
-                !string.IsNullOrEmpty(result.AppleMusic) ||
-                !string.IsNullOrEmpty(result.Tidal) ||
-                !string.IsNullOrEmpty(result.Deezer),
-                "At least one URL should be present"
-            );
+            Assert.True(result.StreamingServices.Count > 0, "At least one URL should be present");
         }
 
         [Fact]
@@ -112,16 +117,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetTrackUrlsAsync(spotifyUrl);
 
             Assert.NotNull(result);
-            Assert.Equal(spotifyUrl, result.Spotify);
+            Assert.Equal(spotifyUrl, result.StreamingServices[MusicPlatform.Spotify]);
             Assert.False(string.IsNullOrEmpty(result.SongName));
             Assert.NotEmpty(result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Spotify);
         }
 
         [Fact]
@@ -135,16 +135,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetTrackUrlsAsync(appleUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.AppleMusic);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.AppleMusic));
             Assert.False(string.IsNullOrEmpty(result.SongName));
             Assert.NotEmpty(result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.AppleMusic);
         }
 
         [Fact]
@@ -158,16 +153,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetTrackUrlsAsync(tidalUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.Tidal);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.Tidal));
             Assert.False(string.IsNullOrEmpty(result.SongName));
             Assert.NotEmpty(result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Tidal);
         }
 
         [Fact]
@@ -181,16 +171,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetTrackUrlsAsync(deezerUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.Deezer);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.Deezer));
             Assert.False(string.IsNullOrEmpty(result.SongName));
             Assert.NotEmpty(result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Deezer);
         }
 
         [Fact]
@@ -204,7 +189,7 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetTrackUrlsAsync(deezerShareLink);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.Deezer);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.Deezer));
             Assert.Equal("Door City", result.SongName);
             Assert.Contains("Kindrid", result.ArtistNames);
         }
@@ -225,19 +210,12 @@ namespace Stream_Linkify_Backend.Tests
             using var scope = _serviceProvider.CreateScope();
             var musicInput = scope.ServiceProvider.GetRequiredService<IMusicInput>();
 
-            AlbumReturnDto result = await musicInput.GetAlbumUrlsAsync(inputUrl);
+            var result = await musicInput.GetAlbumUrlsAsync(inputUrl);
 
             Assert.NotNull(result);
             Assert.Equal(expectedAlbumName, result.AlbumName);
             Assert.NotEmpty(result.ArtistNames);
-
-            Assert.True(
-                !string.IsNullOrEmpty(result.Spotify) ||
-                !string.IsNullOrEmpty(result.AppleMusic) ||
-                !string.IsNullOrEmpty(result.Tidal) ||
-                !string.IsNullOrEmpty(result.Deezer),
-                "At least one URL should be present"
-            );
+            Assert.True(result.StreamingServices.Count > 0, "At least one URL should be present");
         }
 
         [Fact]
@@ -251,16 +229,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetAlbumUrlsAsync(spotifyUrl);
 
             Assert.NotNull(result);
-            Assert.Equal(spotifyUrl, result.Spotify);
+            Assert.Equal(spotifyUrl, result.StreamingServices[MusicPlatform.Spotify]);
             Assert.Equal("Inertia of Solitude", result.AlbumName);
             Assert.Contains("Kindrid", result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Spotify);
         }
 
         [Fact]
@@ -274,16 +247,11 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetAlbumUrlsAsync(appleUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.AppleMusic);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.AppleMusic));
             Assert.Equal("Inertia of Solitude", result.AlbumName);
             Assert.Contains("Kindrid", result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.AppleMusic);
         }
 
         [Fact]
@@ -297,15 +265,10 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetAlbumUrlsAsync(tidalUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.Tidal);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.Tidal));
             Assert.Equal("Inertia of Solitude", result.AlbumName);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Deezer))
-                Console.WriteLine("Warning: Deezer URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Tidal);
         }
 
         [Fact]
@@ -319,19 +282,13 @@ namespace Stream_Linkify_Backend.Tests
             var result = await musicInput.GetAlbumUrlsAsync(deezerUrl);
 
             Assert.NotNull(result);
-            Assert.NotNull(result.Deezer);
+            Assert.True(result.StreamingServices.ContainsKey(MusicPlatform.Deezer));
             Assert.Equal("Inertia of Solitude", result.AlbumName);
             Assert.Contains("Kindrid", result.ArtistNames);
 
-            if (string.IsNullOrEmpty(result.Spotify))
-                Console.WriteLine("Warning: Spotify URL not resolved");
-            if (string.IsNullOrEmpty(result.AppleMusic))
-                Console.WriteLine("Warning: Apple Music URL not resolved");
-            if (string.IsNullOrEmpty(result.Tidal))
-                Console.WriteLine("Warning: Tidal URL not resolved");
+            WarnMissingPlatforms(result.StreamingServices, MusicPlatform.Deezer);
         }
 
         #endregion
-
     }
 }

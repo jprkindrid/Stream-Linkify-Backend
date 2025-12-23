@@ -16,14 +16,18 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var track = await musicServices.AppleTrack.GetTrackByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Apple track not found for {url}");
 
-            return new TrackModel
+            var model = new TrackModel
             {
                 ISRC = track.Attributes.Isrc,
-                AppleMusicUrl = track.Attributes.Url,
                 SongName = track.Attributes.Name,
                 AritstNames = [track.Attributes.ArtistName],
-                AlbumName = track.Attributes.AlbumName
+                AlbumName = track.Attributes.AlbumName,
+                StreamingServices = []
             };
+
+            model.StreamingServices.Add(MusicPlatform.AppleMusic, track.Attributes.Url);
+
+            return model;
         }
 
         public async Task<AlbumModel> FetchAlbumDataAsync(string url)
@@ -31,13 +35,17 @@ namespace Stream_Linkify_Backend.Services.Fetchers
             var album = await musicServices.AppleAlbum.GetByUrlAsync(url)
                 ?? throw new InvalidOperationException($"Apple album not found for {url}");
 
-            return new AlbumModel
+            var model =  new AlbumModel
             {
                 UPC = album.Attributes.Upc,
-                AppleMusicUrl = album.Attributes.Url,
                 AlbumName = album.Attributes.Name,
-                AritstNames = [album.Attributes.ArtistName]
+                AritstNames = [album.Attributes.ArtistName],
+                StreamingServices = []
             };
+
+            model.StreamingServices.Add(MusicPlatform.AppleMusic, album.Attributes.Url);
+
+            return model;
         }
     }
 }

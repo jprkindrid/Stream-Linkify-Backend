@@ -26,13 +26,17 @@ namespace Stream_Linkify_Backend.Services.Fetchers
 
             var artists = await tidalArtistService.GetArtistNamesAsync(url, "track");
 
-            return new TrackModel
+            var model = new TrackModel
             {
                 ISRC = track.Data.Attributes.Isrc,
                 SongName = track.Data.Attributes.Title,
                 AritstNames = artists ?? [],
-                TidalUrl = tidalUrl
+                StreamingServices = [],
             };
+
+            model.StreamingServices.Add(MusicPlatform.Tidal, tidalUrl);
+
+            return model;
         }
 
         public async Task<AlbumModel> FetchAlbumDataAsync(string url)
@@ -45,13 +49,17 @@ namespace Stream_Linkify_Backend.Services.Fetchers
 
             var artists = await tidalArtistService.GetArtistNamesAsync(url, "album");
 
-            return new AlbumModel
+            var model =  new AlbumModel
             {
                 UPC = album.Data.Attributes.BarcodeId,
                 AlbumName = album.Data.Attributes.Title,
                 AritstNames = artists ?? [],
-                TidalUrl = tidalUrl
+                StreamingServices = [],
             };
+
+            model.StreamingServices.Add(MusicPlatform.Tidal, tidalUrl);
+
+            return model;
         }
     }
 }
