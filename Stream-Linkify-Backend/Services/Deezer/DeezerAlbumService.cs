@@ -44,8 +44,12 @@ namespace Stream_Linkify_Backend.Services.Deezer
             // Deezer does not include UPC in results to the 'search' endpoint of their api
             foreach (var album in result.Data)
             {
-                if (string.Equals(album.Title, albumName, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(album.Artist!.Name, artistName, StringComparison.OrdinalIgnoreCase))
+                var titleMatch = album.Title.Contains(albumName, StringComparison.OrdinalIgnoreCase) ||
+                                 albumName.Contains(album.Title, StringComparison.OrdinalIgnoreCase);
+                var artistMatch = artistName.Contains(album.Artist!.Name, StringComparison.OrdinalIgnoreCase) ||
+                                  album.Artist.Name.Contains(artistName, StringComparison.OrdinalIgnoreCase);
+
+                if (titleMatch && artistMatch)
                     return album.Link;
             }
 
