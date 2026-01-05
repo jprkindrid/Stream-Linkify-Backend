@@ -25,6 +25,8 @@ namespace Stream_Linkify_Backend.Helpers.URLs
             return (region, albumId, trackId);
         }
 
+        //TODO: FIX PARSING SO IT CAN HANDLE THE NEW SONG URL VARIANT FOR EXAMPLE https://music.apple.com/us/song/kinetic/1649566880
+
         // Overload: track-only version
         public static (string Region, string AlbumId, string TrackId) ExtractAppleTrackId(string appleUrl)
         {

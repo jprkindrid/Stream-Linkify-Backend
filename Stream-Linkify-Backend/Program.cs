@@ -40,14 +40,18 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
 
 app.UseCors(x => x
 .AllowAnyMethod()
 .AllowAnyHeader()
 .AllowCredentials()
-//.WithOrigins("http://localhost:44351")
+.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
 .SetIsOriginAllowed(origin => true));
+
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
