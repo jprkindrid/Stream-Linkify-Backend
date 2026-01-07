@@ -48,11 +48,12 @@ namespace Stream_Linkify_Backend.Services.Tidal
             }
 
             logger.LogWarning("Could not get TIDAL track for isrc '{isrc}' with title {trackName}", isrc, trackName);
-
-            // This isnt as accurate but I can't check for artists without calling a seperate
-            // endpoint for the artists (in the TidalArtistService) which results in 20-50
-            // extra calls and I will inevitably be rate limited so this is the solution
-            // until TIDAL returns artist names with their track/album response.
+            /*
+            This isnt as accurate but I can't check for artists without calling a seperate
+            endpoint for the artists (in the TidalArtistService) which results in 20-50
+            extra calls and I will inevitably be rate limited so this is the solution
+            until TIDAL returns artist names with their track/album response.
+            */
 
             var firstTrack = result.Included.FirstOrDefault();
             

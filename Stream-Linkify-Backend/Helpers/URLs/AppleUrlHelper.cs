@@ -5,7 +5,7 @@ namespace Stream_Linkify_Backend.Helpers.URLs
 {
     public static class AppleUrlHelper
     {
-        public static (string Region, string AlbumId, string? TrackId) ExtractAppleAlbumIdAndRegion(string appleUrl)
+        public static (string Region, string? AlbumId, string? TrackId) ExtractAppleAlbumIdAndRegion(string appleUrl)
         {
             appleUrl = appleUrl.Trim();
             if (!Uri.TryCreate(appleUrl, UriKind.Absolute, out var uri))
@@ -13,29 +13,44 @@ namespace Stream_Linkify_Backend.Helpers.URLs
 
             var pathParts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-            if (pathParts.Length < 4 || pathParts[0].Length != 2)
+            if (pathParts.Length < 3 || pathParts[0].Length != 2)
                 throw new ArgumentException("Not a valid Apple Music URL");
 
-            var region = pathParts[0]; 
-            var albumId = pathParts[^1]; 
+            var region = pathParts[0];
+            var type = pathParts[1]; // "album" or "song"
 
-            var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            var trackId = queryParams["i"]; // null if not present
+            string? albumId;
+            string? trackId;
+
+            if (type == "song")
+            {
+                // Format: /us/song/song-name/trackId
+                trackId = pathParts[^1];
+                albumId = null;
+            }
+            else if (type == "album")
+            {
+                // Format: /us/album/album-name/albumId?i=trackId
+                albumId = pathParts[^1];
+                var queryParams = HttpUtility.ParseQueryString(uri.Query);
+                trackId = queryParams["i"];
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported Apple Music URL type: {type}");
+            }
 
             return (region, albumId, trackId);
         }
 
-        //TODO: FIX PARSING SO IT CAN HANDLE THE NEW SONG URL VARIANT FOR EXAMPLE https://music.apple.com/us/song/kinetic/1649566880
-
-        // Overload: track-only version
-        public static (string Region, string AlbumId, string TrackId) ExtractAppleTrackId(string appleUrl)
+        public static (string Region, string TrackId) ExtractAppleTrackId(string appleUrl)
         {
-            var (region, albumId, trackId) = ExtractAppleAlbumIdAndRegion(appleUrl);
+            var (region, _, trackId) = ExtractAppleAlbumIdAndRegion(appleUrl);
 
             if (string.IsNullOrEmpty(trackId))
-                throw new ArgumentException("Provided URL is not a track link (missing ?i=trackId)");
+                throw new ArgumentException("Provided URL is not a track link");
 
-            return (region, albumId, trackId);
+            return (region, trackId);
         }
     }
 }

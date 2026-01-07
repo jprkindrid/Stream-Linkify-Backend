@@ -15,7 +15,7 @@ namespace Stream_Linkify_Backend.Services.Apple
 
         public async Task<AppleSongDataDto?> GetTrackByUrlAsync(string url)
         {
-            var (region, _, trackId) = AppleUrlHelper.ExtractAppleTrackId(url);
+            var (region, trackId) = AppleUrlHelper.ExtractAppleTrackId(url);
             var reqUrl = $"https://api.music.apple.com/v1/catalog/{region}/songs/{trackId}";
 
             var result = await appleApiClient.SendAppleRequestAsync<AppleSongResponse>(reqUrl);
