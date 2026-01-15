@@ -70,10 +70,14 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseCors(x => x
-.AllowAnyMethod()
-.AllowAnyHeader()
-.AllowCredentials()
-.AllowAnyOrigin());
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials()
+    .WithOrigins(
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://stream-linkify.pages.dev")
+    .SetIsOriginAllowed(origin => true));
 
 if (app.Environment.IsProduction())
 {
