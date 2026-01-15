@@ -6,22 +6,21 @@ using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 
-builder.Services.AddControllers();
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
         options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
     });
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddAzureWebAppDiagnostics();
 
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
 
 try
 {
@@ -77,8 +76,7 @@ app.UseCors(x => x
     .WithOrigins(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://stream-linkify.pages.dev")
-    .SetIsOriginAllowed(origin => true));
+        "https://stream-linkify.pages.dev"));
 
 if (app.Environment.IsProduction())
 {
@@ -90,4 +88,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-//test 
