@@ -14,7 +14,9 @@ namespace Stream_Linkify_Backend.Services.Apple
         private readonly ILogger<AppleTokenService> logger;
         private readonly Lock lockObj = new();
 
-        public AppleTokenService(IConfiguration config, ILogger<AppleTokenService> logger)
+        public AppleTokenService(
+            IConfiguration config,
+            ILogger<AppleTokenService> logger)
         {
             this.config = config;
             this.logger = logger;
@@ -39,25 +41,9 @@ namespace Stream_Linkify_Backend.Services.Apple
             var teamId = RequiredConfig.Get(config, "AppleMusicKit:TeamId");
             var keyId = RequiredConfig.Get(config, "AppleMusicKit:KeyId");
 
-            string? privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
+            string privateKeyPem = LoadPrivateKey();
 
-            if (string.IsNullOrWhiteSpace(privateKeyPem))
-            {
-                string privateKeyPath = Path.Combine("Keys", $"AuthKey_{keyId}.p8");
-
-                if (!Path.IsPathRooted(privateKeyPath))
-                {
-                    string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, @"..\..\.."));
-                    privateKeyPath = Path.Combine(projectRoot, privateKeyPath);
-                }
-
-                if (!File.Exists(privateKeyPath))
-                    throw new FileNotFoundException($"Apple Music private key not found at {privateKeyPath}");
-
-                privateKeyPem = File.ReadAllText(privateKeyPath);
-            }
-
-            var ecdsa = ECDsa.Create();
+            using var ecdsa = ECDsa.Create();
             ecdsa.ImportFromPem(privateKeyPem);
 
             var securityKey = new ECDsaSecurityKey(ecdsa)
@@ -68,7 +54,7 @@ namespace Stream_Linkify_Backend.Services.Apple
             var creds = new SigningCredentials(
                 securityKey,
                 SecurityAlgorithms.EcdsaSha256
-                );
+            );
 
             var now = DateTimeOffset.UtcNow;
             var expires = now.AddDays(179);
@@ -87,6 +73,39 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             return (jwt, expires.ToUnixTimeSeconds());
         }
+
+        private string LoadPrivateKey()
+        {
+            // Try Key Vault first (via configuration)
+            string? privateKeyPem = config["ApplePrivateKey"];
+
+            if (!string.IsNullOrWhiteSpace(privateKeyPem))
+                return privateKeyPem;
+
+            // Fall back to environment variable
+            privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
+
+            if (!string.IsNullOrWhiteSpace(privateKeyPem))
+                return privateKeyPem;
+
+            // Fall back to local file (development only)
+            var keyId = RequiredConfig.Get(config, "AppleMusicKit:KeyId");
+            string privateKeyPath = Path.Combine("Keys", $"AuthKey_{keyId}.p8");
+
+            if (!Path.IsPathRooted(privateKeyPath))
+            {
+                string projectRoot = Path.GetFullPath(
+                    Path.Combine(AppContext.BaseDirectory, @"..\..\.."));
+                privateKeyPath = Path.Combine(projectRoot, privateKeyPath);
+            }
+
+            if (!File.Exists(privateKeyPath))
+                throw new FileNotFoundException(
+                    $"Apple Music private key not found at {privateKeyPath}");
+
+            return File.ReadAllText(privateKeyPath);
+        }
+
         private bool IsValidToken()
         {
             if (token == null || expiresAt == null)

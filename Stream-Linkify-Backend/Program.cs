@@ -2,6 +2,7 @@ using Scalar.AspNetCore;
 using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Services;
 using Stream_Linkify_Backend.Extensions;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,17 @@ builder.Services.AddControllers()
     {
         options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
     });
+
+
+if (!builder.Environment.IsDevelopment())
+{
+    var keyVaultUrl = new Uri(
+        $"https://{builder.Configuration["KeyVault:VaultName"]}.vault.azure.net/");
+
+    builder.Configuration.AddAzureKeyVault(
+        keyVaultUrl,
+        new DefaultAzureCredential());
+}
 
 
 // created services
