@@ -25,12 +25,28 @@ builder.Services.AddControllers()
 
 if (!builder.Environment.IsDevelopment())
 {
-    var keyVaultUrl = new Uri(
-        $"https://{builder.Configuration["KeyVault:VaultName"]}.vault.azure.net/");
+    var keyVaultName = builder.Configuration["KeyVault:VaultName"];
 
-    builder.Configuration.AddAzureKeyVault(
-        keyVaultUrl,
-        new DefaultAzureCredential());
+    if (string.IsNullOrEmpty(keyVaultName))
+    {
+        throw new InvalidOperationException(
+            "KeyVault:VaultName not configured in appsettings.json");
+    }
+
+    var keyVaultUrl = new Uri(
+        $"https://{keyVaultName}.vault.azure.net/");
+
+    try
+    {
+        builder.Configuration.AddAzureKeyVault(
+            keyVaultUrl,
+            new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException(
+            $"Failed to connect to Key Vault at {keyVaultUrl}: {ex.Message}", ex);
+    }
 }
 
 
