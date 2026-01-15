@@ -14,12 +14,11 @@ namespace Stream_Linkify_Backend.Controllers
     {
         private readonly ILogger<UrlConversionController> logger = logger;
 
-
         [HttpPost("tracks")]
         public async Task<IActionResult> ConvertToAllTrackUrls([FromBody] TrackUrlRequestDto request)
         {
             if (!Uri.TryCreate(request.TrackUrl, UriKind.Absolute, out var uri))
-                return BadRequest("Invalid URL format");
+                return BadRequest(new { error = "Invalid URL format" });
 
             try
             {
@@ -29,19 +28,30 @@ namespace Stream_Linkify_Backend.Controllers
             catch (InvalidOperationException ex)
             {
                 logger.LogWarning(ex, "Track not found or invalid operation for URL: {Url}", request.TrackUrl);
-                return NotFound(ex.Message);
+                return NotFound(new { error = ex.Message });
+            }
+            catch (NotSupportedException ex)
+            {
+                logger.LogWarning(ex, "Unsupported platform for URL: {Url}", request.TrackUrl);
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                logger.LogWarning(ex, "Argument error for URL: {Url}", request.TrackUrl);
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Unexpected error processing URL: {Url}", request.TrackUrl);
-                return StatusCode(500, "An unexpected error occurred");
+                return StatusCode(500, new { error = "An unexpected error occurred" });
             }
         }
+
         [HttpPost("albums")]
         public async Task<IActionResult> ConvertToAllAlbumUrls([FromBody] AlbumUrlRequestDto request)
         {
             if (!Uri.TryCreate(request.AlbumUrl, UriKind.Absolute, out var uri))
-                return BadRequest("Invalid URL format");
+                return BadRequest(new { error = "Invalid URL format" });
 
             try
             {
@@ -51,12 +61,22 @@ namespace Stream_Linkify_Backend.Controllers
             catch (InvalidOperationException ex)
             {
                 logger.LogWarning(ex, "Track not found or invalid operation for URL: {Url}", request.AlbumUrl);
-                return NotFound(ex.Message);
+                return NotFound(new { error = ex.Message });
+            }
+            catch (NotSupportedException ex)
+            {
+                logger.LogWarning(ex, "Unsupported platform for URL: {Url}", request.AlbumUrl);
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                logger.LogWarning(ex, "Argument error for URL: {Url}", request.AlbumUrl);
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Unexpected error processing URL: {Url}", request.AlbumUrl);
-                return StatusCode(500, "An unexpected error occurred");
+                return StatusCode(500, new { error = $"An unexpected error occurred: {ex.Message}" });
             }
         }
     }
