@@ -25,7 +25,7 @@ builder.Services.AddControllers()
 
 try
 {
-    if (!builder.Environment.IsDevelopment())
+    if (!builder.Environment.IsProduction())
     {
         var keyVaultName = builder.Configuration["KeyVault:VaultName"];
         Console.WriteLine($"Loading Key Vault: {keyVaultName}");
@@ -44,7 +44,8 @@ catch (Exception ex)
 {
     Console.WriteLine($"ERROR loading Key Vault: {ex.Message}");
     Console.WriteLine($"Stack: {ex.StackTrace}");
-    throw;
+
+    Console.WriteLine("WARNING: Continuing without Key Vault");
 }
 
 
