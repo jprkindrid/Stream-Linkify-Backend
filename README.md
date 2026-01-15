@@ -6,6 +6,8 @@ Convert a track URL from one streaming provider (Spotify / Apple Music / TIDAL /
 
 </div>
 
+**See The Demo:** [https://stream-linkify.pages.dev/](https://stream-linkify.pages.dev/)
+
 > Status: Work in progress. Public contract and DTO shapes are still volatile; expect breaking changes.
 
 ## ✨ What It Does (Current Scope)
