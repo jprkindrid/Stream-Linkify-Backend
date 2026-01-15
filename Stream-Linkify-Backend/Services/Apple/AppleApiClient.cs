@@ -25,8 +25,12 @@ namespace Stream_Linkify_Backend.Services.Apple
             await sem.WaitAsync();
             try
             {
-                var aToken = appleTokenService.GetValidToken()
-                    ?? throw new InvalidOperationException("error getting apple music jwt");
+                var aToken = appleTokenService.GetValidToken();
+                if (string.IsNullOrEmpty(aToken))
+                {
+                    logger.LogError("Apple Music token is null or empty");
+                    return default;
+                }
 
                 var req = new HttpRequestMessage(HttpMethod.Get, reqUrl);
                 req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", aToken);
@@ -35,21 +39,27 @@ namespace Stream_Linkify_Backend.Services.Apple
                 logger.LogInformation("Making an Apple Music API request at '{ReqUrl}'", reqUrl);
 
                 var resp = await client.SendAsync(req);
-                resp.EnsureSuccessStatusCode();
 
-                var result = await resp.Content.ReadFromJsonAsync<T>()
-                    ?? throw new InvalidOperationException($"Error deserializing Apple Music response for {reqUrl}");
+                if (!resp.IsSuccessStatusCode)
+                {
+                    var content = await resp.Content.ReadAsStringAsync();
+                    logger.LogError("Apple Music API error: {StatusCode} - {Content}", resp.StatusCode, content);
+                    return default;
+                }
 
-
+                var result = await resp.Content.ReadFromJsonAsync<T>();
+                if (result == null)
+                {
+                    logger.LogError("Failed to deserialize Apple Music response for {ReqUrl}", reqUrl);
+                    return default;
+                }
 
                 return result;
             }
             catch (Exception ex)
             {
-                string exMessage = $"error getting making Apple Music API request at {reqUrl}";
-                logger.LogError(ex, exMessage);
+                logger.LogError(ex, "Error making Apple Music API request at {ReqUrl}", reqUrl);
                 return default;
-
             }
             finally { sem.Release(); }
         }
