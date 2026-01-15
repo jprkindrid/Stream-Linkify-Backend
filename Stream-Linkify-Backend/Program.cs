@@ -23,30 +23,28 @@ builder.Services.AddControllers()
     });
 
 
-if (!builder.Environment.IsDevelopment())
+try
 {
-    var keyVaultName = builder.Configuration["KeyVault:VaultName"];
-
-    if (string.IsNullOrEmpty(keyVaultName))
+    if (!builder.Environment.IsDevelopment())
     {
-        throw new InvalidOperationException(
-            "KeyVault:VaultName not configured in appsettings.json");
-    }
+        var keyVaultName = builder.Configuration["KeyVault:VaultName"];
+        Console.WriteLine($"Loading Key Vault: {keyVaultName}");
 
-    var keyVaultUrl = new Uri(
-        $"https://{keyVaultName}.vault.azure.net/");
+        var keyVaultUrl = new Uri(
+            $"https://{keyVaultName}.vault.azure.net/");
 
-    try
-    {
         builder.Configuration.AddAzureKeyVault(
             keyVaultUrl,
             new DefaultAzureCredential());
+
+        Console.WriteLine("Key Vault loaded successfully");
     }
-    catch (Exception ex)
-    {
-        throw new InvalidOperationException(
-            $"Failed to connect to Key Vault at {keyVaultUrl}: {ex.Message}", ex);
-    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"ERROR loading Key Vault: {ex.Message}");
+    Console.WriteLine($"Stack: {ex.StackTrace}");
+    throw;
 }
 
 
@@ -75,8 +73,7 @@ app.UseCors(x => x
 .AllowAnyMethod()
 .AllowAnyHeader()
 .AllowCredentials()
-.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-.SetIsOriginAllowed(origin => true));
+.AllowAnyOrigin());
 
 if (app.Environment.IsProduction())
 {
