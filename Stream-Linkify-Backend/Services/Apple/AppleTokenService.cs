@@ -43,22 +43,22 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             string privateKeyPem = LoadPrivateKey();
 
-            var lines = privateKeyPem.Split(new[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = privateKeyPem.Split(["\n", "\r"], StringSplitOptions.RemoveEmptyEntries);
             var base64Body = string.Concat(lines.Skip(1).TakeWhile(l => !l.StartsWith("-----")));
             var keyBytes = Convert.FromBase64String(base64Body);
 
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportPkcs8PrivateKey(keyBytes, out _);
-
-            var securityKey = new ECDsaSecurityKey(ecdsa)
+            // Parse key and re-create with explicit parameters (bypasses Azure CNG storage)
+            ECParameters ecParameters;
+            using (var tempEcdsa = ECDsa.Create())
             {
-                KeyId = keyId,
-            };
+                tempEcdsa.ImportPkcs8PrivateKey(keyBytes, out _);
+                ecParameters = tempEcdsa.ExportParameters(true);
+            }
 
-            var creds = new SigningCredentials(
-                securityKey,
-                SecurityAlgorithms.EcdsaSha256
-            );
+            using var ecdsa = ECDsa.Create(ecParameters);
+
+            var securityKey = new ECDsaSecurityKey(ecdsa) { KeyId = keyId };
+            var creds = new SigningCredentials(securityKey, SecurityAlgorithms.EcdsaSha256);
 
             var now = DateTimeOffset.UtcNow;
             var expires = now.AddDays(179);
