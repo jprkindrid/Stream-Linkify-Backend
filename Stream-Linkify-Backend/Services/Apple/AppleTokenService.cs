@@ -81,7 +81,7 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             if (!string.IsNullOrWhiteSpace(privateKeyPem))
             {
-                logger.LogInformation("Loaded Apple Music private key from configuration");
+                logger.LogDebug("Loaded Apple Music private key from configuration");
                 return privateKeyPem;
             }
 
@@ -90,7 +90,7 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             if (!string.IsNullOrWhiteSpace(privateKeyPem))
             {
-                logger.LogInformation("Loaded Apple Music private key from environment variable");
+                logger.LogDebug("Loaded Apple Music private key from environment variable");
                 return privateKeyPem;
             }
 
