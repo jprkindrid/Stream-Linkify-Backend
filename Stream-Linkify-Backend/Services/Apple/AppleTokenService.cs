@@ -81,7 +81,18 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             if (!string.IsNullOrWhiteSpace(privateKeyPem))
             {
-                logger.LogDebug("Loaded Apple Music private key from configuration");
+                logger.LogDebug("Loaded from config. Length: {Length}, Contains \\n: {HasNewline}, First 100 chars: {Preview}",
+                    privateKeyPem.Length,
+                    privateKeyPem.Contains("\\n"),
+                    privateKeyPem.Substring(0, Math.Min(100, privateKeyPem.Length)));
+
+                privateKeyPem = privateKeyPem.Replace("\\n", "\n");
+                privateKeyPem = privateKeyPem.Replace("\\r\\n", "\n");
+
+                logger.LogDebug("After normalization. Length: {Length}, First 100 chars: {Preview}",
+                    privateKeyPem.Length,
+                    privateKeyPem.Substring(0, Math.Min(100, privateKeyPem.Length)));
+
                 return privateKeyPem;
             }
 

@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 # Keys n stuff
 *.p8
+*.pem
