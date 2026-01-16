@@ -24,20 +24,18 @@ builder.Services.AddEndpointsApiExplorer();
 
 try
 {
-    if (!builder.Environment.IsProduction())
-    {
-        var keyVaultName = builder.Configuration["KeyVault:VaultName"];
-        Console.WriteLine($"Loading Key Vault: {keyVaultName}");
+    var keyVaultName = builder.Configuration["KeyVault:VaultName"];
+    Console.WriteLine($"Loading Key Vault: {keyVaultName}");
 
-        var keyVaultUrl = new Uri(
-            $"https://{keyVaultName}.vault.azure.net/");
+    var keyVaultUrl = new Uri(
+        $"https://{keyVaultName}.vault.azure.net/");
 
-        builder.Configuration.AddAzureKeyVault(
-            keyVaultUrl,
-            new DefaultAzureCredential());
+    builder.Configuration.AddAzureKeyVault(
+        keyVaultUrl,
+        new DefaultAzureCredential());
 
-        Console.WriteLine("Key Vault loaded successfully");
-    }
+    Console.WriteLine("Key Vault loaded successfully");
+
 }
 catch (Exception ex)
 {
