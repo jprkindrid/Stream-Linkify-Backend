@@ -3,24 +3,20 @@ using Stream_Linkify_Backend.Helpers;
 using Stream_Linkify_Backend.Interfaces.Apple;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Crypto.Parameters;
 
 namespace Stream_Linkify_Backend.Services.Apple
 {
-    public class AppleTokenService : IAppleTokenService
+    public class AppleTokenService(
+        IConfiguration config,
+        ILogger<AppleTokenService> logger) : IAppleTokenService
     {
         private string? token;
         private long? expiresAt;
-        private readonly IConfiguration config;
-        private readonly ILogger<AppleTokenService> logger;
+        private readonly IConfiguration config = config;
+        private readonly ILogger<AppleTokenService> logger = logger;
         private readonly Lock lockObj = new();
-
-        public AppleTokenService(
-            IConfiguration config,
-            ILogger<AppleTokenService> logger)
-        {
-            this.config = config;
-            this.logger = logger;
-        }
 
         public string GetValidToken()
         {
@@ -43,17 +39,37 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             string privateKeyPem = LoadPrivateKey();
 
-            var lines = privateKeyPem.Split(["\n", "\r"], StringSplitOptions.RemoveEmptyEntries);
-            var base64Body = string.Concat(lines.Skip(1).TakeWhile(l => !l.StartsWith("-----")));
-            var keyBytes = Convert.FromBase64String(base64Body);
+            using var reader = new StringReader(privateKeyPem);
+            var pemReader = new PemReader(reader);
+            var keyObject = pemReader.ReadObject();
 
-            // Parse key and re-create with explicit parameters (bypasses Azure CNG storage)
-            ECParameters ecParameters;
-            using (var tempEcdsa = ECDsa.Create())
+            ECPrivateKeyParameters privateKeyParams;
+
+            if (keyObject is Org.BouncyCastle.Crypto.AsymmetricCipherKeyPair keyPair)
             {
-                tempEcdsa.ImportPkcs8PrivateKey(keyBytes, out _);
-                ecParameters = tempEcdsa.ExportParameters(true);
+                privateKeyParams = (ECPrivateKeyParameters)keyPair.Private;
             }
+            else if (keyObject is ECPrivateKeyParameters privateKey)
+            {
+                privateKeyParams = privateKey;
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Unexpected key type: {keyObject?.GetType().Name ?? "null"}");
+            }
+
+            var q = privateKeyParams.Parameters.G.Multiply(privateKeyParams.D).Normalize();
+            var ecParameters = new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+                D = privateKeyParams.D.ToByteArrayUnsigned(),
+                Q =
+                {
+                    X = q.AffineXCoord.GetEncoded(),
+                    Y = q.AffineYCoord.GetEncoded()
+                }
+            };
 
             using var ecdsa = ECDsa.Create(ecParameters);
 
@@ -82,14 +98,16 @@ namespace Stream_Linkify_Backend.Services.Apple
         {
             string? privateKeyPem = config["ApplePrivateKey"];
 
-            if (!string.IsNullOrWhiteSpace(privateKeyPem)){
+            if (!string.IsNullOrWhiteSpace(privateKeyPem))
+            {
                 logger.LogInformation("Loaded Apple Music private key from configuration");
                 return privateKeyPem;
             }
 
             privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
 
-            if (!string.IsNullOrWhiteSpace(privateKeyPem)){
+            if (!string.IsNullOrWhiteSpace(privateKeyPem))
+            {
                 logger.LogInformation("Loaded Apple Music private key from environment variable");
                 return privateKeyPem;
             }
