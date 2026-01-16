@@ -43,8 +43,12 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             string privateKeyPem = LoadPrivateKey();
 
+            var lines = privateKeyPem.Split(new[] { "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+            var base64Body = string.Concat(lines.Skip(1).TakeWhile(l => !l.StartsWith("-----")));
+            var keyBytes = Convert.FromBase64String(base64Body);
+
             using var ecdsa = ECDsa.Create();
-            ecdsa.ImportFromPem(privateKeyPem);
+            ecdsa.ImportPkcs8PrivateKey(keyBytes, out _);
 
             var securityKey = new ECDsaSecurityKey(ecdsa)
             {
@@ -76,34 +80,21 @@ namespace Stream_Linkify_Backend.Services.Apple
 
         private string LoadPrivateKey()
         {
-            // Try Key Vault first (via configuration)
             string? privateKeyPem = config["ApplePrivateKey"];
 
-            if (!string.IsNullOrWhiteSpace(privateKeyPem))
-            {
-                logger.LogDebug("Loaded Apple Music private key from configuration");
+            if (!string.IsNullOrWhiteSpace(privateKeyPem)){
+                logger.LogInformation("Loaded Apple Music private key from configuration");
                 return privateKeyPem;
             }
 
             privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
 
-            if (!string.IsNullOrWhiteSpace(privateKeyPem))
-            {
-                logger.LogDebug("Loaded Apple Music private key from environment variable");
+            if (!string.IsNullOrWhiteSpace(privateKeyPem)){
+                logger.LogInformation("Loaded Apple Music private key from environment variable");
                 return privateKeyPem;
             }
 
-            // Fall back to environment variable
-            privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
-
-            if (!string.IsNullOrWhiteSpace(privateKeyPem))
-            {
-                logger.LogDebug("Loaded Apple Music private key from environment variable");
-                return privateKeyPem;
-            }
-
-            logger.LogWarning("Apple Music private key not found in configuration or environment variable, falling back to local file");
-            // Fall back to local file (development only)
+            logger.LogInformation("Loading Apple Music private key from file");
             var keyId = RequiredConfig.Get(config, "AppleMusicKit:KeyId");
             string privateKeyPath = Path.Combine("Keys", $"AuthKey_{keyId}.p8");
 
