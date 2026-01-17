@@ -39,6 +39,15 @@ namespace Stream_Linkify_Backend.Services.Apple
 
             string privateKeyPem = LoadPrivateKey();
 
+            /*
+             * We use BouncyCastle instead of native .NET methods here because
+             * Azure App Service's sandbox restricts CNG (Cryptography Next Generation)
+             * key storage operations. Loading the P8 key via ImportPkcs8PrivateKey()
+             * fails with: "The system cannot find the file specified"
+             * 
+             * BouncyCastle parses the key entirely in managed memory, bypassing CNG.
+             */
+
             using var reader = new StringReader(privateKeyPem);
             var pemReader = new PemReader(reader);
             var keyObject = pemReader.ReadObject();
