@@ -3,9 +3,9 @@ using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Services;
 using Stream_Linkify_Backend.Extensions;
 using Azure.Identity;
+using StackExchange.Redis; 
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
@@ -26,31 +26,35 @@ try
     var keyVaultName = builder.Configuration["KeyVault:VaultName"];
     Console.WriteLine($"Loading Key Vault: {keyVaultName}");
 
-    var keyVaultUrl = new Uri(
-        $"https://{keyVaultName}.vault.azure.net/");
-
-    builder.Configuration.AddAzureKeyVault(
-        keyVaultUrl,
-        new DefaultAzureCredential());
-
+    var keyVaultUrl = new Uri($"https://{keyVaultName}.vault.azure.net/");
+    builder.Configuration.AddAzureKeyVault(keyVaultUrl, new DefaultAzureCredential());
     Console.WriteLine("Key Vault loaded successfully");
-
 }
 catch (Exception ex)
 {
     Console.WriteLine($"ERROR loading Key Vault: {ex.Message}");
     Console.WriteLine($"Stack: {ex.StackTrace}");
-
-    Console.WriteLine("WARNING: Continuing without Key Vault");
+    throw;
 }
 
-builder.Services.AddStackExchangeRedisCache(o =>
+builder.Services.AddStackExchangeRedisCache(async o =>
 {
-    o.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+    if (builder.Environment.IsDevelopment())
+    {
+        o.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+    }
+    else
+    {
+        var redisHost = builder.Configuration.GetValue<string>("Redis:Host");
+        var config = ConfigurationOptions.Parse($"{redisHost}:6380,ssl=True,abortConnect=False");
+
+        await config.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+
+        o.ConfigurationOptions = config;
+    }
 });
 
 builder.Services.AddScoped<IMusicServiceFactory, MusicServiceFactory>();
-
 builder.Services.AddHttpClient();
 builder.Services.AddSpotifyServices();
 builder.Services.AddAppleServices();
@@ -68,7 +72,6 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-
 app.UseCors(x => x
     .AllowAnyMethod()
     .AllowAnyHeader()
@@ -84,7 +87,5 @@ if (app.Environment.IsProduction())
 }
 
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
