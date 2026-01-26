@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stream_Linkify_Backend.Interfaces.Apple;
 using Stream_Linkify_Backend.Services.Apple;
-using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Threading.Tasks;
-using Xunit;
+
+// For some reason, Apple token tests fail when run in parallel
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace Stream_Linkify_Backend.Tests
 {

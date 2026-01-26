@@ -41,11 +41,11 @@ builder.Services.AddStackExchangeRedisCache(async o =>
 {
     if (builder.Environment.IsDevelopment())
     {
-        o.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+        o.Configuration = builder.Configuration["Redis:ConnectionString"];
     }
     else
     {
-        var redisHost = builder.Configuration.GetValue<string>("Redis:Host");
+        var redisHost = builder.Configuration["Redis:Host"];
         var config = ConfigurationOptions.Parse($"{redisHost}:6380,ssl=True,abortConnect=False");
 
         await config.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
