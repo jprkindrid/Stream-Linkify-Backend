@@ -1,41 +1,48 @@
-﻿using Stream_Linkify_Backend.DTOs.Tidal;
+using Microsoft.Extensions.Caching.Distributed;
+using Stream_Linkify_Backend.DTOs.Tidal;
+using Stream_Linkify_Backend.Enums;
 using Stream_Linkify_Backend.Helpers;
 using Stream_Linkify_Backend.Interfaces.Tidal;
 using System.Text;
 
 namespace Stream_Linkify_Backend.Services.Tidal
 {
-    public class TidalTokenService : ITidalTokenService
+    public class TidalTokenService(
+        IConfiguration config,
+        ILogger<TidalTokenService> logger,
+        IHttpClientFactory httpClientFactory,
+        IDistributedCache cache
+    ) : ITidalTokenService
     {
-        private TidalAccessTokenDto? token;
-        private readonly IConfiguration config;
-        private readonly ILogger<TidalTokenService> logger;
-        private readonly IHttpClientFactory httpClientFactory;
+        private const MusicPlatform ProviderName = MusicPlatform.Tidal;
         private readonly SemaphoreSlim sem = new(1, 1);
-
-        public TidalTokenService(
-            IConfiguration config,
-            ILogger<TidalTokenService> logger,
-            IHttpClientFactory httpClientFactory
-        )
-        {
-            this.config = config;
-            this.logger = logger;
-            this.httpClientFactory = httpClientFactory;
-        }
 
         public async Task<TidalAccessTokenDto> GetValidTokenAsync()
         {
             await sem.WaitAsync();
             try
             {
-                if (token == null || !IsValidToken())
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<TidalAccessTokenDto>(
+                    cache,
+                    ProviderName,
+                    t => t.ExpiresAt);
+
+                if (cached != null)
                 {
-                    logger.LogInformation("Getting new TIDAL access token");
-                    token = await FetchNewToken();
+                    logger.LogDebug("Using cached TIDAL access token");
+                    return cached;
                 }
 
-                return token!;
+                logger.LogInformation("Getting new TIDAL access token");
+                var token = await FetchNewTokenAsync();
+
+                await TokenCacheHelper.SetCachedTokenAsync(
+                    cache,
+                    ProviderName,
+                    token,
+                    token.ExpiresAt);
+
+                return token;
             }
             catch (Exception ex)
             {
@@ -48,7 +55,7 @@ namespace Stream_Linkify_Backend.Services.Tidal
             }
         }
 
-        private async Task<TidalAccessTokenDto> FetchNewToken()
+        private async Task<TidalAccessTokenDto> FetchNewTokenAsync()
         {
             var client = httpClientFactory.CreateClient();
             var clientId = RequiredConfig.Get(config, "Tidal:ClientId");
@@ -63,10 +70,9 @@ namespace Stream_Linkify_Backend.Services.Tidal
             );
 
             req.Content = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("grant_type", "client_credentials")
-                ]
-            );
+            [
+                new KeyValuePair<string, string>("grant_type", "client_credentials")
+            ]);
 
             var resp = await client.SendAsync(req);
             resp.EnsureSuccessStatusCode();
@@ -79,15 +85,6 @@ namespace Stream_Linkify_Backend.Services.Tidal
                 .ToUnixTimeSeconds();
 
             return token;
-        }
-
-        private bool IsValidToken()
-        {
-            if (token?.ExpiresAt == null)
-                return false;
-
-            return DateTimeOffset.FromUnixTimeSeconds(token.ExpiresAt) >
-                   DateTimeOffset.UtcNow.AddMinutes(5);
         }
     }
 }

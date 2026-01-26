@@ -1,8 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stream_Linkify_Backend.DTOs.Tidal;
-using Stream_Linkify_Backend.Interfaces.Apple;
 using Stream_Linkify_Backend.Interfaces.Tidal;
 using Stream_Linkify_Backend.Services.Tidal;
 using System.Threading.Tasks;
@@ -21,6 +20,7 @@ namespace Stream_Linkify_Backend.Tests
             // Logging & HTTP
             services.AddLogging(b => b.AddConsole());
             services.AddHttpClient();
+            services.AddDistributedMemoryCache();
 
             // Config from user-secrets + env vars
             var config = new ConfigurationBuilder()

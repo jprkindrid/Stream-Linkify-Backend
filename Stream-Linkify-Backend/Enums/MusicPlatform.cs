@@ -5,6 +5,7 @@
         Spotify,
         AppleMusic,
         Tidal,
-        Deezer
+        Deezer,
+        Soundcloud
     }
 }

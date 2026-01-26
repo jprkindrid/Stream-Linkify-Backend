@@ -1,7 +1,7 @@
-﻿namespace Stream_Linkify_Backend.Interfaces.Apple
+namespace Stream_Linkify_Backend.Interfaces.Apple
 {
     public interface IAppleTokenService
     {
-        string GetValidToken();
+        Task<string> GetValidTokenAsync();
     }
 }

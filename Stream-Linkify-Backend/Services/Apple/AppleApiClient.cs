@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Stream_Linkify_Backend.Interfaces.Apple;
 using System.Net.Http;
 
@@ -25,7 +25,7 @@ namespace Stream_Linkify_Backend.Services.Apple
             await sem.WaitAsync();
             try
             {
-                var aToken = appleTokenService.GetValidToken();
+                var aToken = await appleTokenService.GetValidTokenAsync();
                 if (string.IsNullOrEmpty(aToken))
                 {
                     logger.LogError("Apple Music token is null or empty");

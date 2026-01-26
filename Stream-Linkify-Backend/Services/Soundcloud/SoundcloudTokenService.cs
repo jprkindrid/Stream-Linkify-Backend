@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Caching.Distributed;
 using Stream_Linkify_Backend.DTOs.Soundcloud;
+using Stream_Linkify_Backend.Enums;
 using Stream_Linkify_Backend.Helpers;
 using Stream_Linkify_Backend.Interfaces.Soundcloud;
 using System.Text;
@@ -8,29 +10,44 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
     public class SoundcloudTokenService(
         IConfiguration config,
         ILogger<SoundcloudTokenService> logger,
-        IHttpClientFactory httpClientFactory
-        ) : ISoundcloudTokenService
+        IHttpClientFactory httpClientFactory,
+        IDistributedCache cache
+    ) : ISoundcloudTokenService
     {
-        private SoundcloudAccessTokenDto? token;
-        private readonly IConfiguration config = config;
-        private readonly ILogger<SoundcloudTokenService> logger = logger;
-        private readonly IHttpClientFactory httpClientFactory = httpClientFactory;
-        private readonly SemaphoreSlim sem = new(1, 1);
-
+        private const MusicPlatform ProviderName = MusicPlatform.Soundcloud;
         private const string TokenUrl = "https://secure.soundcloud.com/oauth/token";
+        private readonly SemaphoreSlim sem = new(1, 1);
 
         public async Task<SoundcloudAccessTokenDto> GetValidTokenAsync()
         {
             await sem.WaitAsync();
             try
             {
-                if (token == null || !IsValidToken())
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SoundcloudAccessTokenDto>(
+                    cache,
+                    ProviderName,
+                    t => t.ExpiresAt);
+
+                if (cached != null)
                 {
-                    logger.LogInformation("Soundcloud token expired or missing, refreshing...");
-                    token = await RefreshOrFetchTokenAsync();
+                    logger.LogDebug("Using cached Soundcloud access token");
+                    return cached;
                 }
 
-                return token!;
+                logger.LogInformation("Soundcloud token expired or missing, refreshing...");
+                var staleToken = await TokenCacheHelper.GetCachedTokenAsync<SoundcloudAccessTokenDto>(
+                    cache,
+                    ProviderName);
+
+                var token = await RefreshOrFetchTokenAsync(staleToken);
+
+                await TokenCacheHelper.SetCachedTokenAsync(
+                    cache,
+                    ProviderName,
+                    token,
+                    token.ExpiresAt);
+
+                return token;
             }
             catch (Exception ex)
             {
@@ -43,14 +60,14 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             }
         }
 
-        private async Task<SoundcloudAccessTokenDto> RefreshOrFetchTokenAsync()
+        private async Task<SoundcloudAccessTokenDto> RefreshOrFetchTokenAsync(SoundcloudAccessTokenDto? cachedToken)
         {
-            if (!string.IsNullOrEmpty(token?.RefreshToken))
+            if (!string.IsNullOrEmpty(cachedToken?.RefreshToken))
             {
                 try
                 {
                     logger.LogInformation("Attempting to refresh Soundcloud token");
-                    return await RefreshTokenAsync(token.RefreshToken);
+                    return await RefreshTokenAsync(cachedToken.RefreshToken);
                 }
                 catch (Exception ex)
                 {
@@ -120,15 +137,6 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
                 .ToUnixTimeSeconds();
 
             return newToken;
-        }
-
-        private bool IsValidToken()
-        {
-            if (token?.ExpiresAt == null)
-                return false;
-
-            return DateTimeOffset.FromUnixTimeSeconds(token.ExpiresAt) >
-                   DateTimeOffset.UtcNow.AddMinutes(5);
         }
     }
 }

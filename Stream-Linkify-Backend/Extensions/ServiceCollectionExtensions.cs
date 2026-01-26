@@ -2,12 +2,14 @@
 using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Interfaces.Apple;
 using Stream_Linkify_Backend.Interfaces.Deezer;
+using Stream_Linkify_Backend.Interfaces.Soundcloud;
 using Stream_Linkify_Backend.Interfaces.Spotify;
 using Stream_Linkify_Backend.Interfaces.Tidal;
 using Stream_Linkify_Backend.Services;
 using Stream_Linkify_Backend.Services.Apple;
 using Stream_Linkify_Backend.Services.Deezer;
 using Stream_Linkify_Backend.Services.Fetchers;
+using Stream_Linkify_Backend.Services.Soundcloud;
 using Stream_Linkify_Backend.Services.Spotify;
 using Stream_Linkify_Backend.Services.Tidal;
 
@@ -51,6 +53,15 @@ namespace Stream_Linkify_Backend.Extensions
             services.AddScoped<IDeezerTrackService, DeezerTrackService>();
             services.AddScoped<IDeezerAlbumService, DeezerAlbumService>();
 
+            return services;
+        }
+
+        public static IServiceCollection AddSoundcloudServices(this IServiceCollection services)
+        {
+            //services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
+            services.AddSingleton<ISoundcloudTokenService, SoundcloudTokenService>();
+            //services.AddScoped<ISoundcloudTrackService, SoundcloudTrackService>();
+            //services.AddScoped<ISoundcloudAlbumService, SoundcloudAlbumService>();
             return services;
         }
 

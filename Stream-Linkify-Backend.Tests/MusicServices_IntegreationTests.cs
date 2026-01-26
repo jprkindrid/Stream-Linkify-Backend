@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stream_Linkify_Backend.DTOs;
@@ -34,6 +34,7 @@ namespace Stream_Linkify_Backend.Tests
             services.AddSingleton<IConfiguration>(config);
             services.AddLogging(b => b.AddConsole());
             services.AddHttpClient();
+            services.AddDistributedMemoryCache();
 
             // Spotify
             services.AddSingleton<ISpotifyApiClient, SpotifyApiClient>();

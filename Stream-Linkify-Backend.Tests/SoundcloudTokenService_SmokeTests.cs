@@ -18,6 +18,7 @@ namespace Stream_Linkify_Backend.Tests
             // Logging & HTTP
             services.AddLogging(b => b.AddConsole());
             services.AddHttpClient();
+            services.AddDistributedMemoryCache();
 
             // Config from user-secrets + env vars
             var config = new ConfigurationBuilder()

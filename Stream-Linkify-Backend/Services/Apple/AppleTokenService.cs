@@ -1,34 +1,66 @@
-﻿using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.IdentityModel.Tokens;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Stream_Linkify_Backend.DTOs.Apple;
+using Stream_Linkify_Backend.Enums;
 using Stream_Linkify_Backend.Helpers;
 using Stream_Linkify_Backend.Interfaces.Apple;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Crypto.Parameters;
 
 namespace Stream_Linkify_Backend.Services.Apple
 {
     public class AppleTokenService(
         IConfiguration config,
-        ILogger<AppleTokenService> logger) : IAppleTokenService
+        ILogger<AppleTokenService> logger,
+        IDistributedCache cache
+    ) : IAppleTokenService
     {
-        private string? token;
-        private long? expiresAt;
-        private readonly IConfiguration config = config;
-        private readonly ILogger<AppleTokenService> logger = logger;
-        private readonly Lock lockObj = new();
+        private const MusicPlatform ProviderName = MusicPlatform.AppleMusic;
+        private readonly SemaphoreSlim sem = new(1, 1);
 
-        public string GetValidToken()
+        public async Task<string> GetValidTokenAsync()
         {
-            lock (lockObj)
+            await sem.WaitAsync();
+            try
             {
-                if (token == null || !IsValidToken())
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<AppleDeveloperTokenCacheDto>(
+                    cache,
+                    ProviderName,
+                    t => t.ExpiresAt);
+
+                if (cached != null)
                 {
-                    logger.LogInformation("Generating new Apple Music developer token");
-                    (token, expiresAt) = GenerateDeveloperToken();
+                    logger.LogDebug("Using cached Apple Music developer token");
+                    return cached.Token;
                 }
 
-                return token!;
+                logger.LogInformation("Generating new Apple Music developer token");
+                var (token, expiresAt) = GenerateDeveloperToken();
+
+                var cacheDto = new AppleDeveloperTokenCacheDto
+                {
+                    Token = token,
+                    ExpiresAt = expiresAt
+                };
+
+                await TokenCacheHelper.SetCachedTokenAsync(
+                    cache,
+                    ProviderName,
+                    cacheDto,
+                    expiresAt);
+
+                return token;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error occurred while getting Apple Music developer token");
+                throw new Exception($"Error occurred while getting Apple token: {ex.Message}");
+            }
+            finally
+            {
+                sem.Release();
             }
         }
 
@@ -137,15 +169,6 @@ namespace Stream_Linkify_Backend.Services.Apple
                     $"Apple Music private key not found at {privateKeyPath}");
 
             return File.ReadAllText(privateKeyPath);
-        }
-
-        private bool IsValidToken()
-        {
-            if (token == null || expiresAt == null)
-                return false;
-
-            return DateTimeOffset.FromUnixTimeSeconds(expiresAt.Value) >
-                   DateTimeOffset.UtcNow.AddMinutes(5);
         }
     }
 }

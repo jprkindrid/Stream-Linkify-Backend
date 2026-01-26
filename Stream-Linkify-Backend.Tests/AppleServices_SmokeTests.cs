@@ -1,9 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Stream_Linkify_Backend.Interfaces.Apple;
-using Stream_Linkify_Backend.Interfaces.Tidal;
 using Stream_Linkify_Backend.Services.Apple;
 using System;
 using System.IdentityModel.Tokens.Jwt;
@@ -30,6 +28,7 @@ namespace Stream_Linkify_Backend.Tests
             // Logging & HTTP
             services.AddLogging(b => b.AddConsole());
             services.AddHttpClient();
+            services.AddDistributedMemoryCache();
 
             // Core Apple services
             services.AddSingleton<IAppleApiClient, AppleApiClient>();
@@ -45,18 +44,18 @@ namespace Stream_Linkify_Backend.Tests
         {
             var svc = _serviceProvider.GetRequiredService<IAppleTokenService>();
 
-            var token = await Task.FromResult(svc.GetValidToken()); // Apple token is sync in your code
+            var token = await svc.GetValidTokenAsync();
 
             Assert.NotNull(token);
             Assert.False(string.IsNullOrWhiteSpace(token));
         }
 
         [Fact]
-        public void GetValidToken_ShouldProduceValidJwt()
+        public async Task GetValidToken_ShouldProduceValidJwt()
         {
-            var service = new AppleTokenService(_config, NullLogger<AppleTokenService>.Instance);
+            var svc = _serviceProvider.GetRequiredService<IAppleTokenService>();
 
-            var token = service.GetValidToken();
+            var token = await svc.GetValidTokenAsync();
 
             Assert.False(string.IsNullOrWhiteSpace(token));
 

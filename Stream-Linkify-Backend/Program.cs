@@ -12,12 +12,11 @@ builder.Services.AddControllers()
     {
         options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
     });
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 builder.Logging.AddAzureWebAppDiagnostics();
-
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
@@ -45,8 +44,11 @@ catch (Exception ex)
     Console.WriteLine("WARNING: Continuing without Key Vault");
 }
 
+builder.Services.AddStackExchangeRedisCache(o =>
+{
+    o.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+});
 
-// created services
 builder.Services.AddScoped<IMusicServiceFactory, MusicServiceFactory>();
 
 builder.Services.AddHttpClient();
@@ -54,12 +56,12 @@ builder.Services.AddSpotifyServices();
 builder.Services.AddAppleServices();
 builder.Services.AddTidalServices();
 builder.Services.AddDeezerServices();
+builder.Services.AddSoundcloudServices();
 builder.Services.AddInputAndResolver();
 builder.Services.AddFetcherServices();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
