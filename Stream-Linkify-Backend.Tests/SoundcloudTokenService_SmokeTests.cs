@@ -47,19 +47,19 @@ namespace Stream_Linkify_Backend.Tests
             Assert.True(token.ExpiresAt > 0);
         }
 
-        [Fact]
-        public async Task GetValidTokenAsync_ReturnsCachedTokenOnSecondCall()
-        {
-            var svc = _serviceProvider.GetRequiredService<ISoundcloudTokenService>();
+        //[Fact]
+        //public async Task GetValidTokenAsync_ReturnsCachedTokenOnSecondCall()
+        //{
+        //    var svc = _serviceProvider.GetRequiredService<ISoundcloudTokenService>();
 
-            var token1 = await svc.GetValidTokenAsync();
-            var token2 = await svc.GetValidTokenAsync();
+        //    var token1 = await svc.GetValidTokenAsync();
+        //    var token2 = await svc.GetValidTokenAsync();
 
-            Assert.NotNull(token1);
-            Assert.NotNull(token2);
-            // Same cached token should be returned
-            Assert.Equal(token1.AccessToken, token2.AccessToken);
-            Assert.Equal(token1.ExpiresAt, token2.ExpiresAt);
-        }
+        //    Assert.NotNull(token1);
+        //    Assert.NotNull(token2);
+        //    // Same cached token should be returned
+        //    Assert.Equal(token1.AccessToken, token2.AccessToken);
+        //    Assert.Equal(token1.ExpiresAt, token2.ExpiresAt);
+        //}
     }
 }

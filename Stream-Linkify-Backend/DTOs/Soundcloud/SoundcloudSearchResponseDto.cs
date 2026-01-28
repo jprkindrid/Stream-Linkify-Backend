@@ -8,8 +8,6 @@ namespace Stream_Linkify_Backend.DTOs.Soundcloud
         [property: JsonPropertyName("next_href")] public string? NextHref { get; set; }
         [property: JsonPropertyName("total_results")] public int? TotalResults { get; set; }
     }
-
-    // Convenience aliases for common search types
     public record SoundcloudTrackSearchResponseDto : SoundcloudSearchResponseDto<SoundcloudTrackDto> { }
     public record SoundcloudAlbumSearchResponseDto : SoundcloudSearchResponseDto<SoundcloudAlbumDto> { }
 }

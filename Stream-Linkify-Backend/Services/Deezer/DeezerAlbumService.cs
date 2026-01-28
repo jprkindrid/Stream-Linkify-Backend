@@ -57,7 +57,5 @@ namespace Stream_Linkify_Backend.Services.Deezer
 
             return null;
         }
-
-        
     }
 }

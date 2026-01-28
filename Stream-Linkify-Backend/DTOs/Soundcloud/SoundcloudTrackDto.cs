@@ -17,8 +17,13 @@ namespace Stream_Linkify_Backend.DTOs.Soundcloud
         [property: JsonPropertyName("user")] public SoundcloudUserDto? User { get; set; }
         [property: JsonPropertyName("publisher_metadata")] public SoundcloudPublisherMetadataDto? PublisherMetadata { get; set; }
         [property: JsonPropertyName("created_at")] public string? CreatedAt { get; set; }
+        [property: JsonPropertyName("release_year")] public int? ReleaseYear { get; set; }
+        [property: JsonPropertyName("release_month")] public int? ReleaseMonth { get; set; }
+        [property: JsonPropertyName("release_day")] public int? ReleaseDay { get; set; }
         [property: JsonPropertyName("release_date")] public string? ReleaseDate { get; set; }
         [property: JsonPropertyName("playback_count")] public long? PlaybackCount { get; set; }
-        [property: JsonPropertyName("likes_count")] public long? LikesCount { get; set; }
+        [property: JsonPropertyName("favoritings_count")] public long? LikesCount { get; set; }
+        [property: JsonPropertyName("isrc")] public string? Isrc { get; set; }
     }
+
 }

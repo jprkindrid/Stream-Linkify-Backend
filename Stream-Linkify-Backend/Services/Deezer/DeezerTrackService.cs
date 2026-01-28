@@ -54,7 +54,7 @@ namespace Stream_Linkify_Backend.Services.Deezer
                    
             }
 
-            logger.LogWarning("No result for Deezer track with name {trackName} and artist {artistname}", trackName, artistName);
+            logger.LogWarning("No result for Deezer track with name {trackName} and artist {artistName}", trackName, artistName);
 
             return null;
         }

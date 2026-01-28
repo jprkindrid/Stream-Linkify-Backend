@@ -3,7 +3,7 @@ using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Services;
 using Stream_Linkify_Backend.Extensions;
 using Azure.Identity;
-using StackExchange.Redis; 
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,23 +37,27 @@ catch (Exception ex)
     throw;
 }
 
-builder.Services.AddStackExchangeRedisCache(async o =>
+
+if (builder.Environment.IsDevelopment())
 {
-    if (builder.Environment.IsDevelopment())
+    Console.WriteLine(builder.Configuration["Redis:ConnectionString"]);
+    builder.Services.AddStackExchangeRedisCache(async o =>
     {
         o.Configuration = builder.Configuration["Redis:ConnectionString"];
-    }
-    else
+    });
+}
+else
+{
+
+    var redisHost = builder.Configuration["Redis:Host"];
+    var config = ConfigurationOptions.Parse($"{redisHost}:6380,ssl=True,abortConnect=False");
+
+    await config.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+    builder.Services.AddStackExchangeRedisCache(async o =>
     {
-        var redisHost = builder.Configuration["Redis:Host"];
-        var config = ConfigurationOptions.Parse($"{redisHost}:6380,ssl=True,abortConnect=False");
-
-        await config.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
-
         o.ConfigurationOptions = config;
-    }
-});
-
+    });
+}
 builder.Services.AddScoped<IMusicServiceFactory, MusicServiceFactory>();
 builder.Services.AddHttpClient();
 builder.Services.AddSpotifyServices();

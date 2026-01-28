@@ -22,7 +22,7 @@ namespace Stream_Linkify_Backend.Services.Tidal
             await sem.WaitAsync();
             try
             {
-                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<TidalAccessTokenDto>(
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<TidalAccessTokenDto, MusicPlatform>(
                     cache,
                     ProviderName,
                     t => t.ExpiresAt);

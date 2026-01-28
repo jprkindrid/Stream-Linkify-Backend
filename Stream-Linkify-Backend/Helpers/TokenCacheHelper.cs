@@ -9,13 +9,16 @@ namespace Stream_Linkify_Backend.Helpers
         private static readonly TimeSpan DefaultBuffer = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MinimumTtl = TimeSpan.FromSeconds(60);
 
-        public static string GetCacheKey(MusicPlatform provider) => $"Token:{provider}";
+        public static string GetCacheKey<TProvider>(TProvider provider) where TProvider : Enum
+            => $"Token:{provider}";
 
-        public static async Task<T?> TryGetCachedTokenAsync<T>(
+        public static async Task<T?> TryGetCachedTokenAsync<T, TProvider>(
             IDistributedCache cache,
-            MusicPlatform provider,
+            TProvider provider,
             Func<T, long> getExpiresAt,
-            TimeSpan? buffer = null) where T : class
+            TimeSpan? buffer = null)
+            where T : class
+            where TProvider : Enum
         {
             var key = GetCacheKey(provider);
             var cached = await cache.GetStringAsync(key);
@@ -36,9 +39,11 @@ namespace Stream_Linkify_Backend.Helpers
             return null;
         }
 
-        public static async Task<T?> GetCachedTokenAsync<T>(
+        public static async Task<T?> GetCachedTokenAsync<T, TProvider>(
             IDistributedCache cache,
-            MusicPlatform provider) where T : class
+            TProvider provider)
+            where T : class
+            where TProvider : Enum
         {
             var key = GetCacheKey(provider);
             var cached = await cache.GetStringAsync(key);
@@ -49,12 +54,14 @@ namespace Stream_Linkify_Backend.Helpers
             return JsonConvert.DeserializeObject<T>(cached);
         }
 
-        public static async Task SetCachedTokenAsync<T>(
+        public static async Task SetCachedTokenAsync<T, TProvider>(
             IDistributedCache cache,
-            MusicPlatform provider,
+            TProvider provider,
             T token,
             long expiresAt,
-            TimeSpan? buffer = null) where T : class
+            TimeSpan? buffer = null)
+            where T : class
+            where TProvider : Enum
         {
             var key = GetCacheKey(provider);
             var effectiveBuffer = buffer ?? DefaultBuffer;

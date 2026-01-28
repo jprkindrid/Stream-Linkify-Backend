@@ -22,7 +22,7 @@ namespace Stream_Linkify_Backend.Services.Spotify
             await sem.WaitAsync();
             try
             {
-                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SpotifyAccessTokenDto>(
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SpotifyAccessTokenDto, MusicPlatform>(
                     cache,
                     ProviderName,
                     t => t.ExpiresAt ?? 0);

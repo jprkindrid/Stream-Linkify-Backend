@@ -25,7 +25,7 @@ namespace Stream_Linkify_Backend.Services.Apple
             await sem.WaitAsync();
             try
             {
-                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<AppleDeveloperTokenCacheDto>(
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<AppleDeveloperTokenCacheDto, MusicPlatform>(
                     cache,
                     ProviderName,
                     t => t.ExpiresAt);

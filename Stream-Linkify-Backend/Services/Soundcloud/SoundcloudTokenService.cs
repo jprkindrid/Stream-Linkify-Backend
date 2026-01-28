@@ -8,9 +8,9 @@ using System.Text;
 namespace Stream_Linkify_Backend.Services.Soundcloud
 {
     public class SoundcloudTokenService(
+        IHttpClientFactory httpClientFactory,
         IConfiguration config,
         ILogger<SoundcloudTokenService> logger,
-        IHttpClientFactory httpClientFactory,
         IDistributedCache cache
     ) : ISoundcloudTokenService
     {
@@ -23,7 +23,7 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             await sem.WaitAsync();
             try
             {
-                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SoundcloudAccessTokenDto>(
+                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SoundcloudAccessTokenDto, MusicPlatform>(
                     cache,
                     ProviderName,
                     t => t.ExpiresAt);
@@ -34,12 +34,8 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
                     return cached;
                 }
 
-                logger.LogInformation("Soundcloud token expired or missing, refreshing...");
-                var staleToken = await TokenCacheHelper.GetCachedTokenAsync<SoundcloudAccessTokenDto>(
-                    cache,
-                    ProviderName);
-
-                var token = await RefreshOrFetchTokenAsync(staleToken);
+                logger.LogInformation("Soundcloud token expired or missing, attempting refresh");
+                var token = await GetNewTokenAsync();
 
                 await TokenCacheHelper.SetCachedTokenAsync(
                     cache,
@@ -51,7 +47,7 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error occurred while getting Soundcloud access token");
+                logger.LogError(ex, "Error occurred while getting Soundcloud access token");
                 throw new Exception($"Error occurred while getting Soundcloud token: {ex.Message}");
             }
             finally
@@ -60,14 +56,18 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             }
         }
 
-        private async Task<SoundcloudAccessTokenDto> RefreshOrFetchTokenAsync(SoundcloudAccessTokenDto? cachedToken)
+        private async Task<SoundcloudAccessTokenDto> GetNewTokenAsync()
         {
-            if (!string.IsNullOrEmpty(cachedToken?.RefreshToken))
+            var cached = await TokenCacheHelper.GetCachedTokenAsync<SoundcloudAccessTokenDto, MusicPlatform>(
+                cache,
+                ProviderName);
+
+            if (!string.IsNullOrEmpty(cached?.RefreshToken))
             {
                 try
                 {
-                    logger.LogInformation("Attempting to refresh Soundcloud token");
-                    return await RefreshTokenAsync(cachedToken.RefreshToken);
+                    logger.LogInformation("Refreshing Soundcloud token");
+                    return await RefreshTokenAsync(cached.RefreshToken);
                 }
                 catch (Exception ex)
                 {
@@ -76,7 +76,7 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             }
 
             logger.LogInformation("Fetching new Soundcloud token via client credentials");
-            return await FetchClientCredentialsTokenAsync();
+            return await FetchNewTokenAsync();
         }
 
         private async Task<SoundcloudAccessTokenDto> RefreshTokenAsync(string refreshToken)
@@ -99,17 +99,18 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             var resp = await client.SendAsync(req);
             resp.EnsureSuccessStatusCode();
 
-            var newToken = await resp.Content.ReadFromJsonAsync<SoundcloudAccessTokenDto>()
+            var token = await resp.Content.ReadFromJsonAsync<SoundcloudAccessTokenDto>()
                 ?? throw new Exception("Error deserializing Soundcloud refresh token response");
 
-            newToken.ExpiresAt = DateTimeOffset.UtcNow
-                .AddSeconds(newToken.ExpiresIn)
-                .ToUnixTimeSeconds();
+            var expiresAt = DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn).ToUnixTimeSeconds();
 
-            return newToken;
+            logger.LogDebug("Refreshed Soundcloud token, expires at {ExpiresAt}",
+                DateTimeOffset.FromUnixTimeSeconds(expiresAt));
+
+            return token with { ExpiresAt = expiresAt };
         }
 
-        private async Task<SoundcloudAccessTokenDto> FetchClientCredentialsTokenAsync()
+        private async Task<SoundcloudAccessTokenDto> FetchNewTokenAsync()
         {
             var client = httpClientFactory.CreateClient();
             var clientId = RequiredConfig.Get(config, "Soundcloud:ClientId");
@@ -129,14 +130,15 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             var resp = await client.SendAsync(req);
             resp.EnsureSuccessStatusCode();
 
-            var newToken = await resp.Content.ReadFromJsonAsync<SoundcloudAccessTokenDto>()
+            var token = await resp.Content.ReadFromJsonAsync<SoundcloudAccessTokenDto>()
                 ?? throw new Exception("Error deserializing Soundcloud token JSON");
 
-            newToken.ExpiresAt = DateTimeOffset.UtcNow
-                .AddSeconds(newToken.ExpiresIn)
-                .ToUnixTimeSeconds();
+            var expiresAt = DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn).ToUnixTimeSeconds();
 
-            return newToken;
+            logger.LogDebug("Retrieved new Soundcloud token, expires at {ExpiresAt}",
+                DateTimeOffset.FromUnixTimeSeconds(expiresAt));
+
+            return token with { ExpiresAt = expiresAt };
         }
     }
 }

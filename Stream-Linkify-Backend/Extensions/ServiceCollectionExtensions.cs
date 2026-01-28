@@ -58,7 +58,7 @@ namespace Stream_Linkify_Backend.Extensions
 
         public static IServiceCollection AddSoundcloudServices(this IServiceCollection services)
         {
-            //services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
+            services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
             services.AddSingleton<ISoundcloudTokenService, SoundcloudTokenService>();
             //services.AddScoped<ISoundcloudTrackService, SoundcloudTrackService>();
             //services.AddScoped<ISoundcloudAlbumService, SoundcloudAlbumService>();
