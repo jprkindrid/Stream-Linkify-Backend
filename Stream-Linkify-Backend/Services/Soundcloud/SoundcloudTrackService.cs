@@ -1,4 +1,4 @@
-﻿using Stream_Linkify_Backend.DTOs.Soundcloud;
+using Stream_Linkify_Backend.DTOs.Soundcloud;
 using Stream_Linkify_Backend.Interfaces.Soundcloud;
 
 namespace Stream_Linkify_Backend.Services.Soundcloud
@@ -14,9 +14,9 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
 
         public async Task<SoundcloudTrackDto?> GetByUrlAsync(string soundcloudUrl)
         {
-            var reqUrl = $"{soundcloudApiUrl}/resolve?url={soundcloudUrl}";
+            var reqUrl = $"{soundcloudApiUrl}/resolve?url={Uri.EscapeDataString(soundcloudUrl)}";
 
-            SoundcloudTrackDto? result = await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudTrackDto>(reqUrl, SoundcloudHeaderPrefix.OAuth);
+            SoundcloudTrackDto? result = await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudTrackDto>(reqUrl);
 
             if (result == null)
             {
@@ -32,7 +32,8 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             var query = $"{artistName} {trackName}";
             var reqUrl = $"{soundcloudApiUrl}/tracks?q={Uri.EscapeDataString(query)}&limit=10&offset=0&linked_partitioning=true";
 
-            SoundcloudSearchResponseDto<SoundcloudTrackDto>? result = await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudSearchResponseDto<SoundcloudTrackDto>>(reqUrl, SoundcloudHeaderPrefix.Bearer);
+            SoundcloudSearchResponseDto<SoundcloudTrackDto>? result = 
+                await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudSearchResponseDto<SoundcloudTrackDto>>(reqUrl);
 
             if (result == null || result.Collection == null || result.Collection.Count == 0)
             {

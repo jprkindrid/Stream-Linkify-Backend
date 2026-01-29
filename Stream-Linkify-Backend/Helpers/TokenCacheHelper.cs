@@ -8,6 +8,8 @@ namespace Stream_Linkify_Backend.Helpers
     {
         private static readonly TimeSpan DefaultBuffer = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MinimumTtl = TimeSpan.FromSeconds(60);
+        // Keep tokens in cache longer to preserve refresh tokens after access token expires
+        private static readonly TimeSpan RefreshTokenGracePeriod = TimeSpan.FromDays(7);
 
         public static string GetCacheKey<TProvider>(TProvider provider) where TProvider : Enum
             => $"Token:{provider}";
@@ -59,13 +61,19 @@ namespace Stream_Linkify_Backend.Helpers
             TProvider provider,
             T token,
             long expiresAt,
-            TimeSpan? buffer = null)
+            TimeSpan? buffer = null,
+            bool preserveForRefresh = true)
             where T : class
             where TProvider : Enum
         {
             var key = GetCacheKey(provider);
             var effectiveBuffer = buffer ?? DefaultBuffer;
-            var ttl = CalculateTtl(expiresAt, effectiveBuffer);
+            
+            // If preserveForRefresh is true, keep the token in cache longer so refresh token can be used
+            // even after the access token expires
+            var ttl = preserveForRefresh 
+                ? CalculateTtlWithGracePeriod(expiresAt) 
+                : CalculateTtl(expiresAt, effectiveBuffer);
 
             var json = JsonConvert.SerializeObject(token);
             var options = new DistributedCacheEntryOptions
@@ -87,6 +95,15 @@ namespace Stream_Linkify_Backend.Helpers
         {
             var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expiresAt);
             var ttl = expirationTime - DateTimeOffset.UtcNow - buffer;
+
+            return ttl < MinimumTtl ? MinimumTtl : ttl;
+        }
+
+        private static TimeSpan CalculateTtlWithGracePeriod(long expiresAt)
+        {
+            var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expiresAt);
+            // Keep in cache for the token lifetime plus grace period for refresh token usage
+            var ttl = expirationTime - DateTimeOffset.UtcNow + RefreshTokenGracePeriod;
 
             return ttl < MinimumTtl ? MinimumTtl : ttl;
         }

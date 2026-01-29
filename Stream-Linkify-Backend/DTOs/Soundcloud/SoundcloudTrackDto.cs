@@ -24,6 +24,12 @@ namespace Stream_Linkify_Backend.DTOs.Soundcloud
         [property: JsonPropertyName("playback_count")] public long? PlaybackCount { get; set; }
         [property: JsonPropertyName("favoritings_count")] public long? LikesCount { get; set; }
         [property: JsonPropertyName("isrc")] public string? Isrc { get; set; }
+
+        /// <summary>
+        /// Gets ISRC from either root level or publisher_metadata (where SoundCloud typically returns it)
+        /// </summary>
+        [JsonIgnore]
+        public string? EffectiveIsrc => Isrc ?? PublisherMetadata?.Isrc;
     }
 
 }

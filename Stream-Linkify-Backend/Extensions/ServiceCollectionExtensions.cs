@@ -12,6 +12,7 @@ using Stream_Linkify_Backend.Services.Fetchers;
 using Stream_Linkify_Backend.Services.Soundcloud;
 using Stream_Linkify_Backend.Services.Spotify;
 using Stream_Linkify_Backend.Services.Tidal;
+using System.Net;
 
 namespace Stream_Linkify_Backend.Extensions
 {
@@ -58,8 +59,20 @@ namespace Stream_Linkify_Backend.Extensions
 
         public static IServiceCollection AddSoundcloudServices(this IServiceCollection services)
         {
-            services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
             services.AddSingleton<ISoundcloudTokenService, SoundcloudTokenService>();
+            // We need a custom HttpClient to prevent auto-redirects and have minimal headers
+            services
+                .AddHttpClient("SoundCloud")
+                .ConfigurePrimaryHttpMessageHandler(
+                    () =>
+                        new SocketsHttpHandler
+                        {
+                            AllowAutoRedirect = false,
+                            AutomaticDecompression = DecompressionMethods.All
+                        }
+                );
+
+            services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
             //services.AddScoped<ISoundcloudTrackService, SoundcloudTrackService>();
             //services.AddScoped<ISoundcloudAlbumService, SoundcloudAlbumService>();
             return services;

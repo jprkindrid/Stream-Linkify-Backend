@@ -1,9 +1,10 @@
+using Azure.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
+using Stream_Linkify_Backend.Extensions;
 using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Services;
-using Stream_Linkify_Backend.Extensions;
-using Azure.Identity;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,7 +42,7 @@ catch (Exception ex)
 if (builder.Environment.IsDevelopment())
 {
     Console.WriteLine(builder.Configuration["Redis:ConnectionString"]);
-    builder.Services.AddStackExchangeRedisCache(async o =>
+    builder.Services.AddStackExchangeRedisCache(o =>
     {
         o.Configuration = builder.Configuration["Redis:ConnectionString"];
     });
@@ -53,7 +54,7 @@ else
     var config = ConfigurationOptions.Parse($"{redisHost}:6380,ssl=True,abortConnect=False");
 
     await config.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
-    builder.Services.AddStackExchangeRedisCache(async o =>
+    builder.Services.AddStackExchangeRedisCache(o =>
     {
         o.ConfigurationOptions = config;
     });
@@ -69,6 +70,25 @@ builder.Services.AddInputAndResolver();
 builder.Services.AddFetcherServices();
 
 var app = builder.Build();
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var cache = scope.ServiceProvider.GetRequiredService<IDistributedCache>();
+
+    Console.WriteLine($"IDistributedCache impl: {cache.GetType().FullName}");
+
+    await cache.SetStringAsync(
+        "debug:cache:ping",
+        "1",
+        new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+        }
+    );
+}
+
+Console.WriteLine($"ASPNETCORE_ENVIRONMENT={builder.Environment.EnvironmentName}");
 
 if (app.Environment.IsDevelopment())
 {

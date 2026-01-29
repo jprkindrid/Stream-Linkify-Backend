@@ -15,9 +15,9 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
         public async Task<SoundcloudAlbumDto?> GetByUrlAsync(string soundcloudUrl)
         {
 
-            var reqUrl = $"{soundcloudApiUrl}/resolve?url={soundcloudUrl}";
+            var reqUrl = $"{soundcloudApiUrl}/resolve?url={Uri.EscapeDataString(soundcloudUrl)}";
 
-            SoundcloudAlbumDto? result = await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudAlbumDto>(reqUrl, SoundcloudHeaderPrefix.OAuth);
+            SoundcloudAlbumDto? result = await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudAlbumDto>(reqUrl);
 
             if (result == null || string.IsNullOrWhiteSpace(result.Title) || string.IsNullOrWhiteSpace(result.User.Username))
             {
@@ -35,7 +35,7 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             var reqUrl = $"{soundcloudApiUrl}/playlists?q={Uri.EscapeDataString(query)}&show_tracks=true&limit=10&offset=0&linked_partitioning=true";
 
             SoundcloudSearchResponseDto<SoundcloudAlbumDto>? result =
-                await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudSearchResponseDto<SoundcloudAlbumDto>>(reqUrl, SoundcloudHeaderPrefix.Bearer);
+                await soundcloudApiClient.SendSoundcloudRequestAsync<SoundcloudSearchResponseDto<SoundcloudAlbumDto>>(reqUrl);
 
             if (result == null || result.Collection == null || result.Collection.Count == 0)
             {

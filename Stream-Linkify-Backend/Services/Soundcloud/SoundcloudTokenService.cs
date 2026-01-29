@@ -23,32 +23,31 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             await sem.WaitAsync();
             try
             {
-                var cached = await TokenCacheHelper.TryGetCachedTokenAsync<SoundcloudAccessTokenDto, MusicPlatform>(
-                    cache,
-                    ProviderName,
-                    t => t.ExpiresAt);
+                var cachedRaw =
+                    await TokenCacheHelper.GetCachedTokenAsync<
+                        SoundcloudAccessTokenDto,
+                        MusicPlatform
+                    >(cache, ProviderName);
 
-                if (cached != null)
+                var buffer = TimeSpan.FromSeconds(30); // or 60s
+
+                if (cachedRaw != null && TokenCacheHelper.IsTokenValid(cachedRaw.ExpiresAt, buffer))
                 {
                     logger.LogDebug("Using cached Soundcloud access token");
-                    return cached;
+                    return cachedRaw;
                 }
 
-                logger.LogInformation("Soundcloud token expired or missing, attempting refresh");
-                var token = await GetNewTokenAsync();
+                logger.LogDebug("Soundcloud token missing/expiring soon, refreshing");
+                var token = await GetNewTokenAsync(cachedRaw);
 
                 await TokenCacheHelper.SetCachedTokenAsync(
                     cache,
                     ProviderName,
                     token,
-                    token.ExpiresAt);
+                    token.ExpiresAt
+                );
 
                 return token;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error occurred while getting Soundcloud access token");
-                throw new Exception($"Error occurred while getting Soundcloud token: {ex.Message}");
             }
             finally
             {
@@ -56,18 +55,15 @@ namespace Stream_Linkify_Backend.Services.Soundcloud
             }
         }
 
-        private async Task<SoundcloudAccessTokenDto> GetNewTokenAsync()
+        private async Task<SoundcloudAccessTokenDto> GetNewTokenAsync(SoundcloudAccessTokenDto? cachedToken)
         {
-            var cached = await TokenCacheHelper.GetCachedTokenAsync<SoundcloudAccessTokenDto, MusicPlatform>(
-                cache,
-                ProviderName);
-
-            if (!string.IsNullOrEmpty(cached?.RefreshToken))
+            var refreshToken = cachedToken?.RefreshToken ?? config["Soundcloud:RefreshToken"]?.Trim();
+            if (!string.IsNullOrEmpty(refreshToken))
             {
                 try
                 {
                     logger.LogInformation("Refreshing Soundcloud token");
-                    return await RefreshTokenAsync(cached.RefreshToken);
+                    return await RefreshTokenAsync(refreshToken);
                 }
                 catch (Exception ex)
                 {
