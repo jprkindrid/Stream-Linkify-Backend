@@ -73,8 +73,8 @@ namespace Stream_Linkify_Backend.Extensions
                 );
 
             services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
-            //services.AddScoped<ISoundcloudTrackService, SoundcloudTrackService>();
-            //services.AddScoped<ISoundcloudAlbumService, SoundcloudAlbumService>();
+            services.AddScoped<ISoundcloudTrackService, SoundcloudTrackService>();
+            services.AddScoped<ISoundcloudAlbumService, SoundcloudAlbumService>();
             return services;
         }
 
@@ -84,6 +84,7 @@ namespace Stream_Linkify_Backend.Extensions
             services.AddScoped<IPlatformDataFetcher, AppleDataFetcher>();
             services.AddScoped<IPlatformDataFetcher, TidalDataFetcher>();
             services.AddScoped<IPlatformDataFetcher, DeezerDataFetcher>();
+            services.AddScoped<IPlatformDataFetcher, SoundcloudDataFetcher>();
             return services;
         }
 

@@ -2,6 +2,7 @@
 using Stream_Linkify_Backend.Interfaces.Deezer;
 using Stream_Linkify_Backend.Interfaces.Spotify;
 using Stream_Linkify_Backend.Interfaces.Tidal;
+using Stream_Linkify_Backend.Interfaces.Soundcloud;
 
 namespace Stream_Linkify_Backend.Interfaces
 {
@@ -22,5 +23,9 @@ namespace Stream_Linkify_Backend.Interfaces
         // Deezer
         IDeezerAlbumService DeezerAlbum { get; }
         IDeezerTrackService DeezerTrack { get; }
+
+        // Soundcloud
+        ISoundcloudTrackService SoundcloudTrack { get; }
+        ISoundcloudAlbumService SoundcloudAlbum { get; }
     }
 }

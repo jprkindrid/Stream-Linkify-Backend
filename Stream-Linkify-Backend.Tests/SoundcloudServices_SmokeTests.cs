@@ -1,11 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Testing.Platform.Logging;
 using Stream_Linkify_Backend.Interfaces.Soundcloud;
 using Stream_Linkify_Backend.Services.Soundcloud;
 using System.Net;
-using System.Net.Http.Headers;
 using Xunit;
 
 
@@ -53,7 +50,6 @@ namespace Stream_Linkify_Backend.Tests
                 );
             services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
             services.AddSingleton<ISoundcloudTrackService, SoundcloudTrackService>();
-            services.AddSingleton<ISoundcloudApiClient, SoundcloudApiClient>();
             services.AddSingleton<ISoundcloudAlbumService, SoundcloudAlbumService>();
 
             _serviceProvider = services.BuildServiceProvider();

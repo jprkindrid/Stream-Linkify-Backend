@@ -1,4 +1,4 @@
-﻿using Stream_Linkify_Backend.Enums;
+using Stream_Linkify_Backend.Enums;
 using Stream_Linkify_Backend.Interfaces;
 using Stream_Linkify_Backend.Models;
 
@@ -19,6 +19,7 @@ namespace Stream_Linkify_Backend.Services
             if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleTrackAsync(track));
             if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalTrackAsync(track));
             if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerTrackAsync(track));
+            if (sourcePlatform != MusicPlatform.Soundcloud) tasks.Add(ResolveSoundcloudTrackASync(track));
 
             await Task.WhenAll(tasks);
         }
@@ -33,6 +34,7 @@ namespace Stream_Linkify_Backend.Services
             if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleAlbumAsync(album));
             if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalAlbumAsync(album));
             if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerAlbumAsync(album));
+            if (sourcePlatform != MusicPlatform.Soundcloud) tasks.Add(ResolveSoundcloudAlbumAsync(album));
 
             await Task.WhenAll(tasks);
         }
@@ -111,6 +113,20 @@ namespace Stream_Linkify_Backend.Services
             }
         }
 
+        private async Task ResolveSoundcloudTrackASync(TrackModel track)
+        {
+            var trackUrl = await musicServices.SoundcloudTrack.GetByNameAsync(
+                track.SongName,
+                track.ArtistNames.FirstOrDefault()!,
+                track.ISRC!
+                );
+            track.StreamingServices.Add(MusicPlatform.Soundcloud, trackUrl);
+            if (trackUrl == null)
+            {
+                logger.LogWarning("Could not resolve Soundcloud URL for track: {TrackName} by {ArtistNames}", track.SongName, string.Join(", ", track.ArtistNames));
+            }
+        }
+
         // Album Resolvers
         private async Task ResolveSpotifyAlbumAsync(AlbumModel album) 
         {
@@ -179,5 +195,18 @@ namespace Stream_Linkify_Backend.Services
             }
         }
 
+        private async Task ResolveSoundcloudAlbumAsync(AlbumModel album)
+        {
+            var albumUrl = await musicServices.SoundcloudAlbum.GetByNameAsync(
+                album.AlbumName!,
+                album.ArtistNames.FirstOrDefault()!
+                );
+            album.StreamingServices.Add(MusicPlatform.Soundcloud, albumUrl);
+            if (albumUrl == null)
+            {
+                logger.LogWarning("Could not resolve Soundcloud URL for album: {AlbumName} by {ArtistNames}", album.AlbumName, string.Join(", ", album.ArtistNames));
+        }
     }
+}
+
 }

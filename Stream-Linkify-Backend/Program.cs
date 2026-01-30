@@ -72,24 +72,6 @@ builder.Services.AddFetcherServices();
 var app = builder.Build();
 
 
-using (var scope = app.Services.CreateScope())
-{
-    var cache = scope.ServiceProvider.GetRequiredService<IDistributedCache>();
-
-    Console.WriteLine($"IDistributedCache impl: {cache.GetType().FullName}");
-
-    await cache.SetStringAsync(
-        "debug:cache:ping",
-        "1",
-        new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-        }
-    );
-}
-
-Console.WriteLine($"ASPNETCORE_ENVIRONMENT={builder.Environment.EnvironmentName}");
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
