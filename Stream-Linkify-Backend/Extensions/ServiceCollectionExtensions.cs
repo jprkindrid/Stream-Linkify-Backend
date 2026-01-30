@@ -9,6 +9,7 @@ using Stream_Linkify_Backend.Services;
 using Stream_Linkify_Backend.Services.Apple;
 using Stream_Linkify_Backend.Services.Deezer;
 using Stream_Linkify_Backend.Services.Fetchers;
+using Stream_Linkify_Backend.Services.Resolvers;
 using Stream_Linkify_Backend.Services.Soundcloud;
 using Stream_Linkify_Backend.Services.Spotify;
 using Stream_Linkify_Backend.Services.Tidal;
@@ -90,6 +91,11 @@ namespace Stream_Linkify_Backend.Extensions
 
         public static IServiceCollection AddInputAndResolver(this IServiceCollection services)
         {
+            services.AddScoped<IPlatformUrlResolver, SpotifyUrlResolver>();
+            services.AddScoped<IPlatformUrlResolver, AppleUrlResolver>();
+            services.AddScoped<IPlatformUrlResolver, TidalUrlResolver>();
+            services.AddScoped<IPlatformUrlResolver, DeezerUrlResolver>();
+            services.AddScoped<IPlatformUrlResolver, SoundcloudUrlResolver>();
             services.AddScoped<IMusicUrlResolver, MusicUrlResolver>();
             services.AddScoped<IMusicInput, MusicInput>();
             return services;

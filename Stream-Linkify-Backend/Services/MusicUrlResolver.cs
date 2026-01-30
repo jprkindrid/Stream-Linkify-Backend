@@ -6,207 +6,145 @@ namespace Stream_Linkify_Backend.Services
 {
     public class MusicUrlResolver(
         ILogger<MusicUrlResolver> logger,
-        IMusicServiceFactory musicServices
+        IMusicServiceFactory musicServices,
+        IEnumerable<IPlatformUrlResolver> platformResolvers
         ) : IMusicUrlResolver
     {
+        private readonly IReadOnlyDictionary<MusicPlatform, IPlatformUrlResolver> platformResolversByPlatform =
+            platformResolvers.ToDictionary(resolver => resolver.Platform);
 
         public async Task ResolveTrackUrlsAsync(TrackModel track, MusicPlatform sourcePlatform)
         {
-            logger.LogInformation("Resolving URLs for track, source: {Source}", sourcePlatform);
-            var tasks = new List<Task>();
-
-            if (sourcePlatform != MusicPlatform.Spotify) tasks.Add(ResolveSpotifyTrackAsync(track));
-            if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleTrackAsync(track));
-            if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalTrackAsync(track));
-            if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerTrackAsync(track));
-            if (sourcePlatform != MusicPlatform.Soundcloud) tasks.Add(ResolveSoundcloudTrackASync(track));
-
-            await Task.WhenAll(tasks);
+            await ResolveTrackUrlsInternalAsync(track, sourcePlatform, allowRefetch: true, onlyMissing: false);
         }
 
         public async Task ResolveAlbumUrlsAsync(AlbumModel album, MusicPlatform sourcePlatform)
         {
+            await ResolveAlbumUrlsInternalAsync(album, sourcePlatform, allowRefetch: true, onlyMissing: false);
+        }
 
-            logger.LogInformation("Resolving URLs for album, source: {Source}", sourcePlatform);
-            var tasks = new List<Task>();
-
-            if (sourcePlatform != MusicPlatform.Spotify) tasks.Add(ResolveSpotifyAlbumAsync(album));
-            if (sourcePlatform != MusicPlatform.AppleMusic) tasks.Add(ResolveAppleAlbumAsync(album));
-            if (sourcePlatform != MusicPlatform.Tidal) tasks.Add(ResolveTidalAlbumAsync(album));
-            if (sourcePlatform != MusicPlatform.Deezer) tasks.Add(ResolveDeezerAlbumAsync(album));
-            if (sourcePlatform != MusicPlatform.Soundcloud) tasks.Add(ResolveSoundcloudAlbumAsync(album));
+        private async Task ResolveTrackUrlsInternalAsync(TrackModel track, MusicPlatform sourcePlatform, bool allowRefetch, bool onlyMissing)
+        {
+            logger.LogInformation("Resolving URLs for track, source: {Source}", sourcePlatform);
+            var tasks = platformResolversByPlatform
+                .Where(resolver => resolver.Key != sourcePlatform)
+                .Where(resolver => ShouldResolvePlatform(track.StreamingServices, resolver.Key, onlyMissing))
+                .Select(resolver => resolver.Value.ResolveTrackAsync(track));
 
             await Task.WhenAll(tasks);
+
+            if (!allowRefetch) {
+                return;
+            }
+
+            if (!HasMissingUrls(track.StreamingServices, sourcePlatform)) {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(track.ISRC)) {
+                await TryHydrateTrackIsrcAsync(track);
+            }
+
+            await ResolveTrackUrlsInternalAsync(track, sourcePlatform, allowRefetch: false, onlyMissing: true);
         }
 
-
-        // Track Resolvers
-        private async Task ResolveSpotifyTrackAsync(TrackModel track)
+        private async Task ResolveAlbumUrlsInternalAsync(AlbumModel album, MusicPlatform sourcePlatform, bool allowRefetch, bool onlyMissing)
         {
-            var (url, albumName, artistNames, artworkUrl) = await musicServices.SpotifyTrack.GetByNameAsync(
-                track.ISRC!,
-                track.SongName,
-                track.ArtistNames.FirstOrDefault()
-                );
+            logger.LogInformation("Resolving URLs for album, source: {Source}", sourcePlatform);
+            var tasks = platformResolversByPlatform
+                .Where(resolver => resolver.Key != sourcePlatform)
+                .Where(resolver => ShouldResolvePlatform(album.StreamingServices, resolver.Key, onlyMissing))
+                .Select(resolver => resolver.Value.ResolveAlbumAsync(album));
 
-            track.StreamingServices.Add(MusicPlatform.Spotify, url);
+            await Task.WhenAll(tasks);
 
-            if ((track.AlbumArtworkUrl == null || track.AlbumArtworkUrl == string.Empty) && artworkUrl != null && artworkUrl != string.Empty) {
-                track.AlbumArtworkUrl = artworkUrl;
+            if (!allowRefetch) {
+                return;
             }
 
-            if (url == null) {
-                logger.LogWarning("Could not resolve Spotify URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.ArtistNames), track.ISRC);
+            if (!HasMissingUrls(album.StreamingServices, sourcePlatform)) {
+                return;
             }
 
-            if (albumName != null && track.AlbumName == null) {
-                track.AlbumName = albumName;
+            if (string.IsNullOrWhiteSpace(album.UPC)) {
+                await TryHydrateAlbumUpcAsync(album);
             }
 
-            if (artistNames != null && (track.ArtistNames.Count == 0 || artistNames.Count > track.ArtistNames.Count)) {
-                track.ArtistNames = artistNames;
-            }
+            await ResolveAlbumUrlsInternalAsync(album, sourcePlatform, allowRefetch: false, onlyMissing: true);
         }
 
-        private async Task ResolveAppleTrackAsync(TrackModel track)
+        private static bool ShouldResolvePlatform(Dictionary<MusicPlatform, string> services, MusicPlatform platform, bool onlyMissing)
         {
-            var trackUrl = await musicServices.AppleTrack.GetTrackUrlByNameAsync(
-                track.ISRC!,
-                track.SongName,
-                track.ArtistNames.FirstOrDefault()
-                );
-
-            track.StreamingServices.Add(MusicPlatform.AppleMusic, trackUrl);
-
-            if (trackUrl == null) {
-                logger.LogWarning("Could not resolve Apple Music URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.ArtistNames), track.ISRC);
-            }
+            return !onlyMissing || IsMissingUrl(services, platform);
         }
 
-        private async Task ResolveTidalTrackAsync(TrackModel track)
+        private static bool HasMissingUrls(Dictionary<MusicPlatform, string> services, MusicPlatform sourcePlatform)
         {
-            var trackUrl = await musicServices.TidalTrack.GetTrackUrlByNameAsync(
-                track.SongName,
-                track.ArtistNames.FirstOrDefault()!,
-                track.ISRC!
-                );
-
-            track.StreamingServices.Add(MusicPlatform.Tidal, trackUrl);
-
-            if (trackUrl == null) {
-                logger.LogWarning("Could not resolve TIDAL URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.ArtistNames), track.ISRC);
-            }
-        }
-
-        private async Task ResolveDeezerTrackAsync(TrackModel track)
-        {
-            logger.LogInformation("Resolving Deezer Track URL for: {TrackName} by {ArtistNames}", track.SongName, string.Join(", ", track.ArtistNames));
-            var trackUrl = await musicServices.DeezerTrack.GetByNameAsync(
-                track.SongName,
-                track.ArtistNames.FirstOrDefault()!
-                );
-
-            track.StreamingServices.Add(MusicPlatform.Deezer, trackUrl);
-
-            if (trackUrl == null) {
-                logger.LogWarning("Could not resolve Deezer URL for track: {TrackName} by {ArtistNames} with ISRC {ISRC}", track.SongName, string.Join(", ", track.ArtistNames), track.ISRC);
-            }
-        }
-
-        private async Task ResolveSoundcloudTrackASync(TrackModel track)
-        {
-            var trackUrl = await musicServices.SoundcloudTrack.GetByNameAsync(
-                track.SongName,
-                track.ArtistNames.FirstOrDefault()!,
-                track.ISRC!
-                );
-            track.StreamingServices.Add(MusicPlatform.Soundcloud, trackUrl);
-            if (trackUrl == null)
+            foreach (var platform in Enum.GetValues<MusicPlatform>())
             {
-                logger.LogWarning("Could not resolve Soundcloud URL for track: {TrackName} by {ArtistNames}", track.SongName, string.Join(", ", track.ArtistNames));
+                if (platform == sourcePlatform) {
+                    continue;
+                }
+
+                if (IsMissingUrl(services, platform)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsMissingUrl(Dictionary<MusicPlatform, string> services, MusicPlatform platform)
+        {
+            return !services.TryGetValue(platform, out var url) || string.IsNullOrWhiteSpace(url);
+        }
+
+        private async Task TryHydrateTrackIsrcAsync(TrackModel track)
+        {
+            if (!string.IsNullOrWhiteSpace(track.ISRC)) {
+                return;
+            }
+
+            if (track.StreamingServices.TryGetValue(MusicPlatform.Spotify, out var spotifyUrl) && !string.IsNullOrWhiteSpace(spotifyUrl)) {
+                var spotifyTrack = await musicServices.SpotifyTrack.GetByUrlAsync(spotifyUrl);
+                var isrc = spotifyTrack?.ExternalIds?.Isrc;
+                if (!string.IsNullOrWhiteSpace(isrc)) {
+                    track.ISRC = isrc;
+                    return;
+                }
+            }
+
+            if (track.StreamingServices.TryGetValue(MusicPlatform.AppleMusic, out var appleUrl) && !string.IsNullOrWhiteSpace(appleUrl)) {
+                var appleTrack = await musicServices.AppleTrack.GetTrackByUrlAsync(appleUrl);
+                var isrc = appleTrack?.Attributes?.Isrc;
+                if (!string.IsNullOrWhiteSpace(isrc)) {
+                    track.ISRC = isrc;
+                }
             }
         }
 
-        // Album Resolvers
-        private async Task ResolveSpotifyAlbumAsync(AlbumModel album) 
+        private async Task TryHydrateAlbumUpcAsync(AlbumModel album)
         {
-            var (url, artistNames, artworkUrl) = await musicServices.SpotifyAlbum.GetByNameAsync(
-                album.UPC!,
-                album.AlbumName!,
-                album.ArtistNames.FirstOrDefault()
-                );  
-
-            album.StreamingServices.Add(MusicPlatform.Spotify, url);
-
-            if ((album.AlbumArtworkUrl == null || album.AlbumArtworkUrl == string.Empty) && artworkUrl != null && artworkUrl != string.Empty) {
-                album.AlbumArtworkUrl = artworkUrl;
+            if (!string.IsNullOrWhiteSpace(album.UPC)) {
+                return;
             }
 
-            if (url == null) { 
-                logger.LogWarning("Could not resolve Spotify URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.ArtistNames), album.UPC);
+            if (album.StreamingServices.TryGetValue(MusicPlatform.Spotify, out var spotifyUrl) && !string.IsNullOrWhiteSpace(spotifyUrl)) {
+                var spotifyAlbum = await musicServices.SpotifyAlbum.GetByUrlAsync(spotifyUrl);
+                var upc = spotifyAlbum?.ExternalIds?.Upc;
+                if (!string.IsNullOrWhiteSpace(upc)) {
+                    album.UPC = upc;
+                    return;
+                }
             }
 
-            if (artistNames != null && (album.ArtistNames.Count == 0 || artistNames.Count > album.ArtistNames.Count)) {
-                album.ArtistNames = artistNames;
+            if (album.StreamingServices.TryGetValue(MusicPlatform.AppleMusic, out var appleUrl) && !string.IsNullOrWhiteSpace(appleUrl)) {
+                var appleAlbum = await musicServices.AppleAlbum.GetByUrlAsync(appleUrl);
+                var upc = appleAlbum?.Attributes?.Upc;
+                if (!string.IsNullOrWhiteSpace(upc)) {
+                    album.UPC = upc;
+                }
             }
-        }
-
-        private async Task ResolveAppleAlbumAsync(AlbumModel album)
-        {
-           var albumUrl = await musicServices.AppleAlbum.GetUrlByNameAsync(
-                album.UPC!,
-                album.AlbumName!,
-                album.ArtistNames.FirstOrDefault()
-                );
-
-            album.StreamingServices.Add(MusicPlatform.AppleMusic, albumUrl);
-
-            if (albumUrl == null) {
-                logger.LogWarning("Could not resolve Apple Music URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.ArtistNames), album.UPC);
-            }
-        }   
-
-        private async Task ResolveTidalAlbumAsync(AlbumModel album)
-        {
-            var albumUrl = await musicServices.TidalAlbum.GetUrlByNameAsync(
-                album.AlbumName!,
-                album.ArtistNames.FirstOrDefault()!,
-                album.UPC!
-                );
-
-            album.StreamingServices.Add(MusicPlatform.Tidal, albumUrl);
-
-            if (albumUrl == null) {
-                logger.LogWarning("Could not resolve TIDAL URL for album: {AlbumName} by {ArtistNames} with UPC {UPC}", album.AlbumName, string.Join(", ", album.ArtistNames), album.UPC);
-            }
-        }
-
-        private async Task ResolveDeezerAlbumAsync(AlbumModel album)
-        {
-            var albumUrl = await musicServices.DeezerAlbum.GetByNameAsync(
-                album.AlbumName!,
-                album.ArtistNames.FirstOrDefault()!
-                );
-
-            album.StreamingServices.Add(MusicPlatform.Deezer, albumUrl);
-
-            if (albumUrl == null) {
-                logger.LogWarning("Could not resolve Deezer URL for album: {AlbumName} by {ArtistNames} ", album.AlbumName, string.Join(", ", album.ArtistNames));
-            }
-        }
-
-        private async Task ResolveSoundcloudAlbumAsync(AlbumModel album)
-        {
-            var albumUrl = await musicServices.SoundcloudAlbum.GetByNameAsync(
-                album.AlbumName!,
-                album.ArtistNames.FirstOrDefault()!
-                );
-            album.StreamingServices.Add(MusicPlatform.Soundcloud, albumUrl);
-            if (albumUrl == null)
-            {
-                logger.LogWarning("Could not resolve Soundcloud URL for album: {AlbumName} by {ArtistNames}", album.AlbumName, string.Join(", ", album.ArtistNames));
         }
     }
-}
-
 }
